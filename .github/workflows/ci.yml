@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests (Python 3.11)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: pytest -q
+
+      - name: Guard - no torch in /app
+        run: |
+          set -euo pipefail
+          if grep -rnE '^[[:space:]]*(import[[:space:]]+torch|from[[:space:]]+torch)' app; then
+            echo "::error::torch import found in /app (production image must not contain torch)"
+            exit 1
+          fi
+
+      - name: Guard - /app must not import the offline eval package
+        run: |
+          set -euo pipefail
+          if grep -rnE '^[[:space:]]*(import[[:space:]]+eval|from[[:space:]]+eval([[:space:].]|$))' app; then
+            echo "::error::app imports the offline eval package"
+            exit 1
+          fi

@@ -1,0 +1,16 @@
+errors:
+  aoi_too_large: "The selected area ({area_km2} km²) exceeds the maximum allowable limit of {max_area_km2} km²."
+  no_valid_orbit_pair: "No matching Sentinel-1 pre-event acquisition exists with relative orbit {relative_orbit} and direction {direction} in the search window."
+  no_post_event_scene: "No Sentinel-1 post-event scene found at or after {event_date}."
+  cdse_unavailable: "Copernicus Data Space Ecosystem (CDSE) is temporarily unavailable."
+  ohsome_unavailable: "ohsome OSM history service is temporarily unavailable."
+  model_low_confidence: "Model predictions showed low confidence across the target AOI."
+  s2_too_cloudy: "Sentinel-2 optical scene cloud cover ({cloud_pct}%) exceeds threshold ({threshold}%). Proceeding in radar-only mode."
+  busy: "System is at maximum capacity (queue length: {queue_len}). Please retry shortly."
+  internal: "An internal processing error occurred: {message}"
+
+labels:
+  flooded_area: "Flooded Area"
+  buildings_affected: "Buildings Affected"
+  road_km_affected: "Road Impacted"
+  settlements_cut_off: "Cut-off Settlements"

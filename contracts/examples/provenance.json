@@ -1,0 +1,32 @@
+{
+  "mode": "live",
+  "computed_at": "2024-09-29T10:15:30Z",
+  "code_version": "c483a91",
+  "config_hash": "a1b2c3d4e5f67890",
+  "model_version": "dyotak_unet_v1_onnx",
+  "scenes": {
+    "post": {
+      "scene_id": "S1A_IW_GRDH_1SDV_20240929T002511_20240929T002536_055871_06D14A_83B2",
+      "acquisition_time": "2024-09-29T00:25:11Z",
+      "orbit_direction": "DESCENDING",
+      "relative_orbit": 121
+    },
+    "pre": [
+      {
+        "scene_id": "S1A_IW_GRDH_1SDV_20240917T002511_20240917T002536_055696_06CB9E_41FA",
+        "acquisition_time": "2024-09-17T00:25:11Z",
+        "orbit_direction": "DESCENDING",
+        "relative_orbit": 121
+      }
+    ],
+    "relative_orbit": 121,
+    "direction": "DESCENDING"
+  },
+  "s2": {
+    "used": true,
+    "cloud_pct": 12.4,
+    "scene_id": "S2A_MSIL2A_20240928T051011_R090_T45RVP_20240928T082015"
+  },
+  "osm_snapshot_date": "2024-09-25",
+  "degradations": []
+}

@@ -1,0 +1,22 @@
+You are building DYOTAK, a satellite flood-damage mapping system for rescue
+teams (hackathon Track B). Read /docs/PLAN.md and /docs/ARCHITECTURE.md
+before every task.
+
+HARD RULES
+1. Never change pinned dependencies or restructure the repo unless I ask.
+2. The production image contains NO torch. Inference uses onnxruntime only.
+   Training code lives in /training with its own requirements file.
+3. Python 3.11, FastAPI + pydantic v2, Shapely 2, rasterio wheels.
+4. Allowed inputs: Sentinel-1, Sentinel-2, Copernicus DEM, OSM as of a
+   snapshot date BEFORE the event, and the listed training datasets.
+   NEVER import or read Copernicus EMS, UNOSAT or post-event OSM in /app.
+   EMSR927 data is read only from /eval. Add a test enforcing this.
+5. Enforce osm_snapshot_date < event_date with an assertion and a test.
+6. Compare Sentinel-1 only from the same relative orbit AND direction.
+   If no valid pair exists, raise NO_VALID_ORBIT_PAIR. Never produce a map.
+7. Every number shown to users comes from facts.json. No hardcoded results.
+   Every result carries provenance: live | cached | degraded(reason).
+8. Every external call has a timeout, retry with backoff, and a typed error.
+9. Each task: write the code, write tests, run them, and report results.
+   Do not mark a task done if tests fail.
+10. Follow /contracts/openapi.json exactly. If you must change it, stop and ask.

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+  <meta charset="UTF-8">
+  <title>द्योतक बाढी स्थिति प्रतिवेदन - {{ job_id }}</title>
+  <style>
+    body { font-family: "Noto Sans Devanagari", sans-serif; margin: 2rem; color: #1e293b; }
+    h1 { color: #0f172a; border-bottom: 2px solid #0284c7; padding-bottom: 0.5rem; }
+    .metric { display: inline-block; margin-right: 2rem; }
+    .metric-value { font-size: 1.5rem; font-weight: bold; color: #0284c7; }
+    footer { margin-top: 3rem; font-size: 0.8rem; color: #64748b; border-top: 1px solid #cbd5e1; padding-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>द्योतक द्रुत बाढी स्थिति प्रतिवेदन</h1>
+  <p><strong>कार्य आईडी:</strong> {{ job_id }} | <strong>घटना मिति:</strong> {{ event_date }}</p>
+  <hr/>
+  <div>
+    <div class="metric">
+      <div>बाढी प्रभावित क्षेत्र</div>
+      <div class="metric-value">{{ flooded_area_km2 }} वर्ग कि.मी.</div>
+    </div>
+    <div class="metric">
+      <div>प्रभावित भवनहरू</div>
+      <div class="metric-value">{{ buildings_affected }}</div>
+    </div>
+    <div class="metric">
+      <div>प्रभावित सडक</div>
+      <div class="metric-value">{{ road_km_affected }} कि.मी.</div>
+    </div>
+    <div class="metric">
+      <div>सम्पर्क विच्छेद बस्तीहरू</div>
+      <div class="metric-value">{{ settlements_newly_cut_off }}</div>
+    </div>
+  </div>
+  <footer>
+    कोपरनिकस सेन्टिनेल डाटा द्योतकद्वारा प्रशोधित। OSM © ओपनस्ट्रिटम्याप योगदानकर्ताहरू।
+  </footer>
+</body>
+</html>

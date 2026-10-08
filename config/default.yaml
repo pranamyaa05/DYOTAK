@@ -1,0 +1,81 @@
+# DYOTAK Default Configuration
+# Every tunable lives here. Unknown keys fail startup.
+# Each parameter carries an origin comment per ARCHITECTURE.md Section 3.
+
+aoi:
+  max_side_km: 50.0 # origin: engineering (Processing Unit bounds & RAM headroom)
+  max_area_km2: 2500.0 # origin: engineering (Safe upper bound for 30m resolution run)
+
+pairing:
+  primary_repeat_days: 12 # origin: literature (Sentinel-1 exact constellation repeat cycle)
+  search_window_days: 24 # origin: engineering (Allow 2 repeat cycles before event)
+  max_pre_scenes: 3 # origin: calibrated(val_split) (Optimal median speckle suppression)
+  allow_degraded_offsets: true # origin: engineering (Permits older same-orbit pre-scenes if needed)
+
+fetch:
+  resolution_m: 10.0 # origin: literature (Sentinel-1 GRD IW native pixel spacing)
+  timeout_seconds: 60.0 # origin: engineering (CDSE process API clip budget)
+  retries: 3 # origin: engineering (CDSE rate limit resilience)
+  backoff_factor: 1.5 # origin: engineering
+
+flood:
+  probability_threshold: 0.50 # origin: calibrated(kuro_siwo_val) (Optimal F1 cutoff)
+  tile_size: 512 # origin: engineering (GPU/CPU memory tiling chunk)
+  overlap_pixels: 64 # origin: engineering (Cosine blending border)
+  speckle_filter_size: 3 # origin: literature (Lee / median 3x3 filter kernel)
+
+terrain:
+  slope_cutoff_degrees: 15.0 # origin: literature (Radar layover & steep slope false positive masking)
+  hand_cutoff_m: 15.0 # origin: calibrated(val_split) (Height Above Nearest Drainage flood envelope)
+
+optical:
+  cloud_limit_pct: 20.0 # origin: engineering (Threshold above which S2 is discarded as cloudy)
+  mndwi_threshold: 0.2 # origin: literature (Modified NDWI water threshold)
+
+osm:
+  snapshot_policy: "latest_before_event" # origin: engineering (.cursorrules rule 5)
+  feature_filters:
+    - "building"
+    - "highway"
+    - "bridge"
+    - "amenity"
+    - "place"
+
+damage:
+  affected_overlap_fraction: 0.25 # origin: calibrated(val_split) (Overlap for 'affected')
+  possibly_affected_overlap_fraction: 0.05 # origin: calibrated(val_split) (Overlap for 'possibly_affected')
+  bridge_buffer_m: 15.0 # origin: engineering (Geometric alignment margin)
+
+isolation:
+  flood_threshold_edge: 0.50 # origin: engineering (Edge severance threshold)
+  settlement_snap_distance_m: 500.0 # origin: engineering (Max distance to snap place node to road)
+  facility_tags:
+    - "hospital"
+    - "clinic"
+  place_tags:
+    - "town"
+    - "village"
+    - "hamlet"
+
+upstream:
+  accumulation_threshold: 1000 # origin: engineering (D8 flow accumulation river threshold)
+  hand_corridor_m: 10.0 # origin: engineering (Corridor boundary around traced flow path)
+
+landing:
+  max_slope_degrees: 5.0 # origin: literature (Helicopter landing slope safety limit)
+  min_area_m2: 2500.0 # origin: engineering (50m x 50m clear clearing)
+  max_distance_from_settlement_m: 2000.0 # origin: engineering
+
+copilot:
+  model: "gemini-2.5-flash" # origin: engineering
+  max_tokens: 1024 # origin: engineering
+  template_fallback_enabled: true # origin: engineering
+
+jobs:
+  max_concurrent_jobs: 2 # origin: engineering (Avoid OOM on 1-worker host)
+  stage_timeout_seconds: 180.0 # origin: engineering
+  queue_limit: 10 # origin: engineering
+
+cache:
+  root_dir: "data/cache" # origin: engineering
+  ttl_days: 30 # origin: engineering

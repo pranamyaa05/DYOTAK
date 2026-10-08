@@ -1,0 +1,7 @@
+{
+  "status": "ok",
+  "version": "0.1.0",
+  "mock_mode": false,
+  "onnx_available": true,
+  "torch_detected": false
+}

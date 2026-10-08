@@ -1,0 +1,10 @@
+# DYOTAK runtime dependencies.
+# NOTE: the production image contains NO torch. Inference is onnxruntime only
+# (.cursorrules rule 2). Heavy geospatial/ML wheels (rasterio, shapely, networkx,
+# numpy, onnxruntime, weasyprint) are installed by the deployment image and are
+# not required to run the API contract tests.
+fastapi==0.111.1
+uvicorn==0.30.3
+pydantic==2.13.5
+pydantic-settings==2.4.0
+PyYAML==6.0.3

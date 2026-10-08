@@ -1,0 +1,21 @@
+{
+  "job_id": "job-20240929-trishuli-001",
+  "status": "succeeded",
+  "current_stage": "report",
+  "progress": 1.0,
+  "stages": [
+    {"name": "pairing", "state": "succeeded", "started_at": "2024-09-29T10:14:02Z", "ended_at": "2024-09-29T10:14:05Z", "duration_seconds": 3.2, "warnings": []},
+    {"name": "fetch", "state": "succeeded", "started_at": "2024-09-29T10:14:05Z", "ended_at": "2024-09-29T10:14:25Z", "duration_seconds": 19.8, "warnings": []},
+    {"name": "flood_model", "state": "succeeded", "started_at": "2024-09-29T10:14:25Z", "ended_at": "2024-09-29T10:14:48Z", "duration_seconds": 22.5, "warnings": []},
+    {"name": "terrain_filter", "state": "succeeded", "started_at": "2024-09-29T10:14:48Z", "ended_at": "2024-09-29T10:14:55Z", "duration_seconds": 7.1, "warnings": []},
+    {"name": "osm", "state": "succeeded", "started_at": "2024-09-29T10:14:55Z", "ended_at": "2024-09-29T10:15:08Z", "duration_seconds": 13.0, "warnings": []},
+    {"name": "damage", "state": "succeeded", "started_at": "2024-09-29T10:15:08Z", "ended_at": "2024-09-29T10:15:16Z", "duration_seconds": 8.3, "warnings": []},
+    {"name": "isolation", "state": "succeeded", "started_at": "2024-09-29T10:15:16Z", "ended_at": "2024-09-29T10:15:24Z", "duration_seconds": 7.9, "warnings": []},
+    {"name": "facts", "state": "succeeded", "started_at": "2024-09-29T10:15:24Z", "ended_at": "2024-09-29T10:15:27Z", "duration_seconds": 2.8, "warnings": []},
+    {"name": "report", "state": "succeeded", "started_at": "2024-09-29T10:15:27Z", "ended_at": "2024-09-29T10:15:30Z", "duration_seconds": 3.4, "warnings": []}
+  ],
+  "created_at": "2024-09-29T10:14:00Z",
+  "updated_at": "2024-09-29T10:15:30Z",
+  "warnings": [],
+  "error": null
+}

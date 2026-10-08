@@ -1,0 +1,1807 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "DYOTAK",
+    "description": "Orbital intelligence for ground-level survival \u2014 Satellite flood-damage mapping system for rescue teams.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Get Health",
+        "description": "Liveness check for server and environment compliance.",
+        "operationId": "get_health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/selftest": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Get Selftest",
+        "description": "End-to-end self-test verification of config, models, and cache.",
+        "operationId": "get_selftest_api_selftest_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/presets": {
+      "get": {
+        "tags": [
+          "presets"
+        ],
+        "summary": "List Presets",
+        "description": "List pre-configured evaluation and demonstration AOIs.",
+        "operationId": "list_presets_api_presets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "title": "Response List Presets Api Presets Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/preflight": {
+      "post": {
+        "tags": [
+          "preflight"
+        ],
+        "summary": "Run Preflight",
+        "description": "Perform fast, non-heavy preflight checks on AOI, Sentinel-1 pairing, and S2 clouds.",
+        "operationId": "run_preflight_api_preflight_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreflightRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreflightResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Submit Job",
+        "description": "Submit a new pipeline run.",
+        "operationId": "submit_job_api_jobs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Get Job Status",
+        "description": "Poll job progress, stage timing, and status.",
+        "operationId": "get_job_status_api_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{job_id}/cancel": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Cancel Job",
+        "description": "Cancel a running or queued job.",
+        "operationId": "cancel_job_api_jobs__job_id__cancel_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{job_id}/result": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Get Job Result",
+        "description": "Retrieve result manifest containing layer URLs and provenance.",
+        "operationId": "get_job_result_api_jobs__job_id__result_get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultManifest"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{job_id}/facts": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Get Job Facts",
+        "description": "Retrieve single source of truth facts.json for this job.",
+        "operationId": "get_job_facts_api_jobs__job_id__facts_get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactsJSON"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{job_id}/layers/{layer_name}": {
+      "get": {
+        "tags": [
+          "layers"
+        ],
+        "summary": "Get Layer",
+        "description": "Retrieve layer GeoJSON feature collection or raster stream.",
+        "operationId": "get_layer_api_jobs__job_id__layers__layer_name__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "layer_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Layer Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/upstream": {
+      "post": {
+        "tags": [
+          "upstream"
+        ],
+        "summary": "Trace Upstream",
+        "description": "Estimate downstream flow corridor and intersect with settlements.",
+        "operationId": "trace_upstream_api_upstream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpstreamRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/copilot/ask": {
+      "post": {
+        "tags": [
+          "copilot"
+        ],
+        "summary": "Ask Copilot",
+        "description": "Answer relief coordinator queries guarded strictly by facts.json.",
+        "operationId": "ask_copilot_api_copilot_ask_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CopilotQuestion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CopilotAnswer"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{job_id}/report": {
+      "get": {
+        "tags": [
+          "report"
+        ],
+        "summary": "Get Report",
+        "description": "Generate or retrieve one-page situation report.",
+        "operationId": "get_report_api_jobs__job_id__report_get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(en|ne)$",
+              "default": "en",
+              "title": "Lang"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tiles/terrain/{z}/{x}/{y}.png": {
+      "get": {
+        "tags": [
+          "tiles"
+        ],
+        "summary": "Get Terrain Tile",
+        "description": "Serve Terrain-RGB tile for 3D elevation rendering.",
+        "operationId": "get_terrain_tile_api_tiles_terrain__z___x___y__png_get",
+        "parameters": [
+          {
+            "name": "z",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Z"
+            }
+          },
+          {
+            "name": "x",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "X"
+            }
+          },
+          {
+            "name": "y",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Y"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/eval/summary": {
+      "get": {
+        "tags": [
+          "eval"
+        ],
+        "summary": "Get Eval Summary",
+        "description": "Retrieve model vs log-ratio baseline metrics.",
+        "operationId": "get_eval_summary_api_eval_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Eval Summary Api Eval Summary Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/eval/emsr927": {
+      "get": {
+        "tags": [
+          "eval"
+        ],
+        "summary": "Get Emsr927 Comparison",
+        "description": "Retrieve EMSR927 Trishuli case study comparison (labelled precomputed validation).",
+        "operationId": "get_emsr927_comparison_api_eval_emsr927_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Emsr927 Comparison Api Eval Emsr927 Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CopilotAnswer": {
+        "properties": {
+          "answer": {
+            "type": "string",
+            "title": "Answer"
+          },
+          "facts_used": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Facts Used"
+          },
+          "template_fallback": {
+            "type": "boolean",
+            "title": "Template Fallback"
+          },
+          "disclaimer": {
+            "type": "string",
+            "title": "Disclaimer",
+            "default": "Numbers are rendered by code from the maps, not generated by the language model."
+          }
+        },
+        "type": "object",
+        "required": [
+          "answer",
+          "facts_used",
+          "template_fallback"
+        ],
+        "title": "CopilotAnswer"
+      },
+      "CopilotQuestion": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "lang": {
+            "type": "string",
+            "title": "Lang",
+            "description": "'en' or 'ne'",
+            "default": "en"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "question"
+        ],
+        "title": "CopilotQuestion"
+      },
+      "CutoffSettlementRecord": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Settlement name from OSM place/town tag"
+          },
+          "class": {
+            "$ref": "#/components/schemas/SettlementClass",
+            "description": "Cut-off classification"
+          },
+          "buildings_affected": {
+            "type": "integer",
+            "title": "Buildings Affected",
+            "description": "Number of flooded/affected buildings in cluster"
+          },
+          "extra_distance_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extra Distance Km",
+            "description": "Detour km if still connected, null if cut off"
+          },
+          "priority_rank": {
+            "type": "integer",
+            "title": "Priority Rank",
+            "description": "Rescue priority rank (1 = highest priority)"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "class",
+          "buildings_affected",
+          "priority_rank"
+        ],
+        "title": "CutoffSettlementRecord",
+        "description": "Entry in cutoff_settlements table."
+      },
+      "DegradationItem": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "Machine-readable degradation code"
+          },
+          "reason_key": {
+            "type": "string",
+            "title": "Reason Key",
+            "description": "i18n catalogue key explaining degradation"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details",
+            "description": "Additional context"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "reason_key"
+        ],
+        "title": "DegradationItem",
+        "description": "Disclosed degradation entry."
+      },
+      "ErrorCode": {
+        "type": "string",
+        "enum": [
+          "AOI_TOO_LARGE",
+          "NO_VALID_ORBIT_PAIR",
+          "NO_POST_EVENT_SCENE",
+          "CDSE_UNAVAILABLE",
+          "OHSOME_UNAVAILABLE",
+          "MODEL_LOW_CONFIDENCE",
+          "S2_TOO_CLOUDY",
+          "BUSY",
+          "INTERNAL"
+        ],
+        "title": "ErrorCode",
+        "description": "Canonical error codes defined in ARCHITECTURE.md."
+      },
+      "ErrorDetail": {
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode",
+            "description": "Machine-readable error code"
+          },
+          "message_key": {
+            "type": "string",
+            "title": "Message Key",
+            "description": "Key for i18n message catalogue"
+          },
+          "params": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Params",
+            "description": "Template parameters for translation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "message_key"
+        ],
+        "title": "ErrorDetail",
+        "description": "Structured error payload carrying locale message_key and parameter dict."
+      },
+      "FactItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Machine-readable fact key e.g. flooded_area_km2"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "title": "Value",
+            "description": "Fact value computed by pipeline"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit",
+            "description": "Unit of measurement e.g. km2, count, km"
+          },
+          "source_stage": {
+            "$ref": "#/components/schemas/PipelineStage",
+            "description": "Pipeline stage producing this fact"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "value",
+          "unit",
+          "source_stage"
+        ],
+        "title": "FactItem",
+        "description": "An individual atomic fact item."
+      },
+      "FactsJSON": {
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/FactsMeta"
+          },
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/FactItem"
+            },
+            "type": "array",
+            "title": "Facts"
+          },
+          "tables": {
+            "$ref": "#/components/schemas/FactsTables"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "meta",
+          "facts",
+          "tables"
+        ],
+        "title": "FactsJSON",
+        "description": "Single source of truth numbers generated by Stage 8 (Facts)."
+      },
+      "FactsMeta": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "bbox": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 4,
+            "title": "Bbox"
+          },
+          "event_date": {
+            "type": "string",
+            "title": "Event Date"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "units": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Units"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "job_id",
+          "bbox",
+          "event_date",
+          "provenance"
+        ],
+        "title": "FactsMeta",
+        "description": "Metadata enclosing facts.json."
+      },
+      "FactsTables": {
+        "properties": {
+          "cutoff_settlements": {
+            "items": {
+              "$ref": "#/components/schemas/CutoffSettlementRecord"
+            },
+            "type": "array",
+            "title": "Cutoff Settlements"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "FactsTables",
+        "description": "Structured tabular data in facts.json."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Liveness state",
+            "default": "ok"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "App version",
+            "default": "0.1.0"
+          },
+          "mock_mode": {
+            "type": "boolean",
+            "title": "Mock Mode",
+            "description": "Whether server is operating in mock mode",
+            "default": false
+          },
+          "onnx_available": {
+            "type": "boolean",
+            "title": "Onnx Available",
+            "description": "Whether ONNX runtime is available for inference",
+            "default": true
+          },
+          "torch_detected": {
+            "type": "boolean",
+            "title": "Torch Detected",
+            "description": "Compliance check: MUST be False in production",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "HealthResponse",
+        "description": "System liveness and component status."
+      },
+      "JobOptions": {
+        "properties": {
+          "use_baseline": {
+            "type": "boolean",
+            "title": "Use Baseline",
+            "description": "Force log-ratio baseline instead of ML model",
+            "default": false
+          },
+          "optical_enabled": {
+            "type": "boolean",
+            "title": "Optical Enabled",
+            "description": "Attempt Sentinel-2 optical cue extraction",
+            "default": true
+          },
+          "max_pre_scenes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Pre Scenes",
+            "description": "Max pre-event acquisitions to median"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "JobOptions",
+        "description": "Optional execution tunables for a job."
+      },
+      "JobRequest": {
+        "properties": {
+          "bbox": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 4,
+            "title": "Bbox",
+            "description": "Bounding box [min_lon, min_lat, max_lon, max_lat] in WGS84"
+          },
+          "event_date": {
+            "type": "string",
+            "title": "Event Date",
+            "description": "Event date in YYYY-MM-DD format"
+          },
+          "osm_snapshot_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Osm Snapshot Date",
+            "description": "Optional OSM snapshot date; must strictly precede event_date"
+          },
+          "options": {
+            "$ref": "#/components/schemas/JobOptions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "bbox",
+          "event_date"
+        ],
+        "title": "JobRequest",
+        "description": "Payload to trigger a full flood and damage mapping run."
+      },
+      "JobState": {
+        "type": "string",
+        "enum": [
+          "queued",
+          "running",
+          "succeeded",
+          "failed",
+          "cancelled"
+        ],
+        "title": "JobState",
+        "description": "High-level state of a pipeline job."
+      },
+      "JobStatus": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id",
+            "description": "Unique job identifier"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobState",
+            "description": "Overall job state"
+          },
+          "current_stage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PipelineStage"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Currently active stage if running"
+          },
+          "progress": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Progress",
+            "description": "Overall progress fraction [0.0, 1.0]",
+            "default": 0.0
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/StageStatus"
+            },
+            "type": "array",
+            "title": "Stages",
+            "description": "Per-stage progress records"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "ISO 8601 job creation timestamp"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At",
+            "description": "ISO 8601 last update timestamp"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings",
+            "description": "Accumulated job warnings"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorDetail"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Failure details if status=failed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "job_id",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "JobStatus",
+        "description": "Current lifecycle status and stage progression of a job."
+      },
+      "LayerFormat": {
+        "type": "string",
+        "enum": [
+          "png",
+          "geojson",
+          "geoparquet",
+          "cog"
+        ],
+        "title": "LayerFormat",
+        "description": "File/wire format for layer."
+      },
+      "LayerMetadata": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Layer identifier e.g. flood_polygons, s1_post"
+          },
+          "layer_type": {
+            "$ref": "#/components/schemas/LayerType",
+            "description": "Raster or vector"
+          },
+          "format": {
+            "$ref": "#/components/schemas/LayerFormat",
+            "description": "Format encoding"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "description": "Endpoint URL to fetch layer data"
+          },
+          "bounds": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bounds",
+            "description": "Layer bounding box [min_lon, min_lat, max_lon, max_lat]"
+          },
+          "feature_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feature Count",
+            "description": "Feature count for vectors"
+          },
+          "legend": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legend",
+            "description": "Legend and styling tokens"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "layer_type",
+          "format",
+          "url"
+        ],
+        "title": "LayerMetadata",
+        "description": "Description and download/render URL of a generated layer."
+      },
+      "LayerType": {
+        "type": "string",
+        "enum": [
+          "raster",
+          "vector"
+        ],
+        "title": "LayerType",
+        "description": "Type of map layer."
+      },
+      "OrbitDirection": {
+        "type": "string",
+        "enum": [
+          "ASCENDING",
+          "DESCENDING"
+        ],
+        "title": "OrbitDirection",
+        "description": "Sentinel-1 orbit pass direction."
+      },
+      "PipelineStage": {
+        "type": "string",
+        "enum": [
+          "pairing",
+          "fetch",
+          "flood_model",
+          "terrain_filter",
+          "osm",
+          "damage",
+          "isolation",
+          "facts",
+          "report"
+        ],
+        "title": "PipelineStage",
+        "description": "Explicit pipeline stages defined in ARCHITECTURE.md Section 4."
+      },
+      "PreflightRequest": {
+        "properties": {
+          "bbox": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 4,
+            "title": "Bbox",
+            "description": "Bounding box [min_lon, min_lat, max_lon, max_lat] in WGS84"
+          },
+          "event_date": {
+            "type": "string",
+            "title": "Event Date",
+            "description": "Event date in YYYY-MM-DD format"
+          },
+          "osm_snapshot_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Osm Snapshot Date",
+            "description": "Optional OSM snapshot date; must strictly precede event_date"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "bbox",
+          "event_date"
+        ],
+        "title": "PreflightRequest",
+        "description": "Lightweight availability and orbit compatibility check before starting a job."
+      },
+      "PreflightResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok",
+            "description": "Whether a job can be launched with these parameters"
+          },
+          "bbox": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 4,
+            "title": "Bbox"
+          },
+          "aoi_area_km2": {
+            "type": "number",
+            "title": "Aoi Area Km2",
+            "description": "Computed AOI area in square kilometers"
+          },
+          "event_date": {
+            "type": "string",
+            "title": "Event Date"
+          },
+          "osm_snapshot_date": {
+            "type": "string",
+            "title": "Osm Snapshot Date"
+          },
+          "pair_found": {
+            "type": "boolean",
+            "title": "Pair Found",
+            "description": "Whether a valid same-orbit S1 pair is available"
+          },
+          "scenes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScenePairingProvenance"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Matched S1 pair if found"
+          },
+          "s2_available": {
+            "type": "boolean",
+            "title": "S2 Available",
+            "description": "Whether clear S2 optical imagery exists",
+            "default": false
+          },
+          "s2_cloud_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "S2 Cloud Pct",
+            "description": "Optical cloud estimate if inspected"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings",
+            "description": "Warnings (e.g. S2 cloudy, high slope)"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorDetail"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Blocking error if ok=False"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ok",
+          "bbox",
+          "aoi_area_km2",
+          "event_date",
+          "osm_snapshot_date",
+          "pair_found"
+        ],
+        "title": "PreflightResponse",
+        "description": "Result of preflight check."
+      },
+      "Provenance": {
+        "properties": {
+          "mode": {
+            "$ref": "#/components/schemas/ProvenanceMode",
+            "description": "Execution mode: live, cached, or degraded"
+          },
+          "computed_at": {
+            "type": "string",
+            "title": "Computed At",
+            "description": "ISO 8601 timestamp of computation"
+          },
+          "code_version": {
+            "type": "string",
+            "title": "Code Version",
+            "description": "Git commit hash or release version"
+          },
+          "config_hash": {
+            "type": "string",
+            "title": "Config Hash",
+            "description": "Hash of active configuration values"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version",
+            "description": "Model weights identifier or baseline version"
+          },
+          "scenes": {
+            "$ref": "#/components/schemas/ScenePairingProvenance",
+            "description": "S1 pair details"
+          },
+          "s2": {
+            "$ref": "#/components/schemas/S2Provenance",
+            "description": "S2 optical details"
+          },
+          "osm_snapshot_date": {
+            "type": "string",
+            "title": "Osm Snapshot Date",
+            "description": "Pre-event snapshot date used for OSM query"
+          },
+          "degradations": {
+            "items": {
+              "$ref": "#/components/schemas/DegradationItem"
+            },
+            "type": "array",
+            "title": "Degradations",
+            "description": "List of degradations if any"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "mode",
+          "computed_at",
+          "code_version",
+          "config_hash",
+          "model_version",
+          "scenes",
+          "s2",
+          "osm_snapshot_date"
+        ],
+        "title": "Provenance",
+        "description": "Complete provenance object attached to all output artifacts."
+      },
+      "ProvenanceMode": {
+        "type": "string",
+        "enum": [
+          "live",
+          "cached",
+          "degraded"
+        ],
+        "title": "ProvenanceMode",
+        "description": "Provenance execution mode."
+      },
+      "ResultManifest": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "bbox": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 4,
+            "title": "Bbox"
+          },
+          "event_date": {
+            "type": "string",
+            "title": "Event Date"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "layers": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/LayerMetadata"
+            },
+            "type": "object",
+            "title": "Layers",
+            "description": "Map of available raster and vector layers"
+          },
+          "facts_url": {
+            "type": "string",
+            "title": "Facts Url",
+            "description": "URL to fetch full facts.json"
+          },
+          "report_url": {
+            "type": "string",
+            "title": "Report Url",
+            "description": "URL to generate/fetch situation report PDF"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Summary",
+            "description": "Headline metric summaries"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "job_id",
+          "bbox",
+          "event_date",
+          "provenance",
+          "layers",
+          "facts_url",
+          "report_url"
+        ],
+        "title": "ResultManifest",
+        "description": "Complete manifest returned upon job completion."
+      },
+      "S2Provenance": {
+        "properties": {
+          "used": {
+            "type": "boolean",
+            "title": "Used",
+            "description": "Whether optical data was incorporated"
+          },
+          "cloud_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cloud Pct",
+            "description": "Estimated cloud percentage in AOI clip"
+          },
+          "scene_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scene Id",
+            "description": "S2 L2A scene identifier if used"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "used"
+        ],
+        "title": "S2Provenance",
+        "description": "Sentinel-2 optical layer usage and cloud coverage."
+      },
+      "SceneMetadata": {
+        "properties": {
+          "scene_id": {
+            "type": "string",
+            "title": "Scene Id",
+            "description": "Product identifier / scene name"
+          },
+          "acquisition_time": {
+            "type": "string",
+            "title": "Acquisition Time",
+            "description": "ISO 8601 acquisition timestamp"
+          },
+          "orbit_direction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OrbitDirection"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Pass direction"
+          },
+          "relative_orbit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relative Orbit",
+            "description": "Relative orbit number"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "scene_id",
+          "acquisition_time"
+        ],
+        "title": "SceneMetadata",
+        "description": "Metadata for an individual satellite acquisition."
+      },
+      "ScenePairingProvenance": {
+        "properties": {
+          "post": {
+            "$ref": "#/components/schemas/SceneMetadata",
+            "description": "Post-event acquisition"
+          },
+          "pre": {
+            "items": {
+              "$ref": "#/components/schemas/SceneMetadata"
+            },
+            "type": "array",
+            "title": "Pre",
+            "description": "Pre-event baseline acquisition(s)"
+          },
+          "relative_orbit": {
+            "type": "integer",
+            "title": "Relative Orbit",
+            "description": "Shared relative orbit number"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/OrbitDirection",
+            "description": "Shared pass direction"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "post",
+          "pre",
+          "relative_orbit",
+          "direction"
+        ],
+        "title": "ScenePairingProvenance",
+        "description": "Verified same-orbit Sentinel-1 pair metadata."
+      },
+      "SettlementClass": {
+        "type": "string",
+        "enum": [
+          "newly_cut_off",
+          "still_connected",
+          "no_pre_event_access"
+        ],
+        "title": "SettlementClass",
+        "description": "Settlement isolation status classes defined in ARCHITECTURE.md Section 4.7."
+      },
+      "StageState": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "running",
+          "succeeded",
+          "failed",
+          "skipped"
+        ],
+        "title": "StageState",
+        "description": "Execution status of an individual stage."
+      },
+      "StageStatus": {
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/PipelineStage",
+            "description": "Stage identifier"
+          },
+          "state": {
+            "$ref": "#/components/schemas/StageState",
+            "description": "Execution status",
+            "default": "pending"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At",
+            "description": "ISO 8601 timestamp"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At",
+            "description": "ISO 8601 timestamp"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds",
+            "description": "Duration in seconds"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings",
+            "description": "Non-fatal warnings recorded during stage"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "StageStatus",
+        "description": "Progress record for a single pipeline stage."
+      },
+      "UpstreamRequest": {
+        "properties": {
+          "point": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Point",
+            "description": "[lon, lat]"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "point"
+        ],
+        "title": "UpstreamRequest"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

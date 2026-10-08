@@ -1,0 +1,163 @@
+{
+  "job_id": "job-20240929-trishuli-001",
+  "bbox": [85.15, 27.85, 85.35, 28.05],
+  "event_date": "2024-09-28",
+  "provenance": {
+    "mode": "live",
+    "computed_at": "2024-09-29T10:15:30Z",
+    "code_version": "c483a91",
+    "config_hash": "a1b2c3d4e5f67890",
+    "model_version": "dyotak_unet_v1_onnx",
+    "scenes": {
+      "post": {
+        "scene_id": "S1A_IW_GRDH_1SDV_20240929T002511_20240929T002536_055871_06D14A_83B2",
+        "acquisition_time": "2024-09-29T00:25:11Z",
+        "orbit_direction": "DESCENDING",
+        "relative_orbit": 121
+      },
+      "pre": [
+        {
+          "scene_id": "S1A_IW_GRDH_1SDV_20240917T002511_20240917T002536_055696_06CB9E_41FA",
+          "acquisition_time": "2024-09-17T00:25:11Z",
+          "orbit_direction": "DESCENDING",
+          "relative_orbit": 121
+        }
+      ],
+      "relative_orbit": 121,
+      "direction": "DESCENDING"
+    },
+    "s2": {
+      "used": true,
+      "cloud_pct": 12.4,
+      "scene_id": "S2A_MSIL2A_20240928T051011_R090_T45RVP_20240928T082015"
+    },
+    "osm_snapshot_date": "2024-09-25",
+    "degradations": []
+  },
+  "layers": {
+    "s1_pre": {
+      "name": "s1_pre",
+      "layer_type": "raster",
+      "format": "png",
+      "url": "/api/jobs/job-20240929-trishuli-001/layers/s1_pre",
+      "bounds": [85.15, 27.85, 85.35, 28.05],
+      "feature_count": null,
+      "legend": null
+    },
+    "s1_post": {
+      "name": "s1_post",
+      "layer_type": "raster",
+      "format": "png",
+      "url": "/api/jobs/job-20240929-trishuli-001/layers/s1_post",
+      "bounds": [85.15, 27.85, 85.35, 28.05],
+      "feature_count": null,
+      "legend": null
+    },
+    "flood_probability": {
+      "name": "flood_probability",
+      "layer_type": "raster",
+      "format": "png",
+      "url": "/api/jobs/job-20240929-trishuli-001/layers/flood_probability",
+      "bounds": [85.15, 27.85, 85.35, 28.05],
+      "feature_count": null,
+      "legend": {
+        "colormap": "blues",
+        "range": [0.0, 1.0]
+      }
+    },
+    "uncertainty": {
+      "name": "uncertainty",
+      "layer_type": "raster",
+      "format": "png",
+      "url": "/api/jobs/job-20240929-trishuli-001/layers/uncertainty",
+      "bounds": [85.15, 27.85, 85.35, 28.05],
+      "feature_count": null,
+      "legend": null
+    },
+    "flood_polygons": {
+      "name": "flood_polygons",
+      "layer_type": "vector",
+      "format": "geojson",
+      "url": "/api/jobs/job-20240929-trishuli-001/layers/flood_polygons",
+      "bounds": [85.15, 27.85, 85.35, 28.05],
+      "feature_count": 86,
+      "legend": {"color": "#1e88e5"}
+    },
+    "debris_polygons": {
+      "name": "debris_polygons",
+      "layer_type": "vector",
+      "format": "geojson",
+      "url": "/api/jobs/job-20240929-trishuli-001/layers/debris_polygons",
+      "bounds": [85.15, 27.85, 85.35, 28.05],
+      "feature_count": 14,
+      "legend": {"color": "#8d6e63"}
+    },
+    "buildings": {
+      "name": "buildings",
+      "layer_type": "vector",
+      "format": "geojson",
+      "url": "/api/jobs/job-20240929-trishuli-001/layers/buildings",
+      "bounds": [85.15, 27.85, 85.35, 28.05],
+      "feature_count": 2140,
+      "legend": {
+        "affected": "#e53935",
+        "possibly_affected": "#fb8c00",
+        "unaffected": "#757575"
+      }
+    },
+    "roads": {
+      "name": "roads",
+      "layer_type": "vector",
+      "format": "geojson",
+      "url": "/api/jobs/job-20240929-trishuli-001/layers/roads",
+      "bounds": [85.15, 27.85, 85.35, 28.05],
+      "feature_count": 482,
+      "legend": {
+        "affected": "#d32f2f",
+        "passable": "#388e3c"
+      }
+    },
+    "bridges": {
+      "name": "bridges",
+      "layer_type": "vector",
+      "format": "geojson",
+      "url": "/api/jobs/job-20240929-trishuli-001/layers/bridges",
+      "bounds": [85.15, 27.85, 85.35, 28.05],
+      "feature_count": 12,
+      "legend": {
+        "possibly_impacted": "#f57c00",
+        "intact": "#1976d2"
+      }
+    },
+    "settlements": {
+      "name": "settlements",
+      "layer_type": "vector",
+      "format": "geojson",
+      "url": "/api/jobs/job-20240929-trishuli-001/layers/settlements",
+      "bounds": [85.15, 27.85, 85.35, 28.05],
+      "feature_count": 27,
+      "legend": {
+        "newly_cut_off": "#b71c1c",
+        "still_connected": "#fbc02d",
+        "no_pre_event_access": "#9e9e9e"
+      }
+    },
+    "landing_zones": {
+      "name": "landing_zones",
+      "layer_type": "vector",
+      "format": "geojson",
+      "url": "/api/jobs/job-20240929-trishuli-001/layers/landing_zones",
+      "bounds": [85.15, 27.85, 85.35, 28.05],
+      "feature_count": 6,
+      "legend": {"color": "#43a047"}
+    }
+  },
+  "facts_url": "/api/jobs/job-20240929-trishuli-001/facts",
+  "report_url": "/api/jobs/job-20240929-trishuli-001/report",
+  "summary": {
+    "flooded_area_km2": 14.2,
+    "buildings_affected": 312,
+    "road_km_affected": 23.5,
+    "settlements_cut_off": 7
+  }
+}

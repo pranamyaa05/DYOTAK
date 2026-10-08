@@ -1,0 +1,11 @@
+{
+  "error": {
+    "code": "NO_VALID_ORBIT_PAIR",
+    "message_key": "errors.no_valid_orbit_pair",
+    "params": {
+      "relative_orbit": 121,
+      "direction": "DESCENDING",
+      "search_window_days": 24
+    }
+  }
+}

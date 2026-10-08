@@ -1,0 +1,13 @@
+# Event-level training and validation splits (never split by tile)
+train_events:
+  - "spain_valencia_2024"
+  - "greece_daniel_2023"
+  - "pakistan_indus_2022"
+  - "germany_ahr_2021"
+
+val_events:
+  - "italy_emilia_2023"
+
+held_out_himalayan:
+  - "nepal_melamchi_2021"
+  - "india_chamoli_2021"

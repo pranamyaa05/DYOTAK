@@ -1,0 +1,19 @@
+{
+  "status": "completed",
+  "splits": {
+    "held_out_himalayan": {
+      "onnx_model": {
+        "iou": 0.74,
+        "f1": 0.85,
+        "precision": 0.88,
+        "recall": 0.82
+      },
+      "log_ratio_baseline": {
+        "iou": 0.61,
+        "f1": 0.75,
+        "precision": 0.71,
+        "recall": 0.80
+      }
+    }
+  }
+}

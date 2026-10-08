@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DYOTAK Situation Report - {{ job_id }}</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; color: #1e293b; }
+    h1 { color: #0f172a; border-bottom: 2px solid #0284c7; padding-bottom: 0.5rem; }
+    .metric { display: inline-block; margin-right: 2rem; }
+    .metric-value { font-size: 1.5rem; font-weight: bold; color: #0284c7; }
+    footer { margin-top: 3rem; font-size: 0.8rem; color: #64748b; border-top: 1px solid #cbd5e1; padding-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>DYOTAK Rapid Flood Situation Report</h1>
+  <p><strong>Job:</strong> {{ job_id }} | <strong>Event Date:</strong> {{ event_date }}</p>
+  <hr/>
+  <div>
+    <div class="metric">
+      <div>Flooded Area</div>
+      <div class="metric-value">{{ flooded_area_km2 }} km²</div>
+    </div>
+    <div class="metric">
+      <div>Buildings Affected</div>
+      <div class="metric-value">{{ buildings_affected }}</div>
+    </div>
+    <div class="metric">
+      <div>Road Impacted</div>
+      <div class="metric-value">{{ road_km_affected }} km</div>
+    </div>
+    <div class="metric">
+      <div>Cut-off Settlements</div>
+      <div class="metric-value">{{ settlements_newly_cut_off }}</div>
+    </div>
+  </div>
+  <footer>
+    Copernicus Sentinel data processed by DYOTAK. OSM © OpenStreetMap contributors. Educational prototype.
+  </footer>
+</body>
+</html>

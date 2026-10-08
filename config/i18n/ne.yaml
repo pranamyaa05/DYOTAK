@@ -1,0 +1,16 @@
+errors:
+  aoi_too_large: "चयन गरिएको क्षेत्र ({area_km2} वर्ग कि.मी.) अधिकतम सीमा {max_area_km2} वर्ग कि.मी. भन्दा बढी छ।"
+  no_valid_orbit_pair: "सापेक्षिक कक्ष {relative_orbit} र दिशा {direction} भएको कुनै पूर्व-घटना सेन्टिनेल-१ दृश्य फेला परेन।"
+  no_post_event_scene: "{event_date} वा त्यसपछिको कुनै सेन्टिनेल-१ दृश्य फेला परेन।"
+  cdse_unavailable: "कोपरनिकस डाटा स्पेस इकोसिस्टम (CDSE) अस्थायी रूपमा अनुपलब्ध छ।"
+  ohsome_unavailable: "ohsome OSM सेवा अस्थायी रूपमा अनुपलब्ध छ।"
+  model_low_confidence: "मोडेलको अनुमानमा न्यून विश्वसनीयता पाइयो।"
+  s2_too_cloudy: "सेन्टिनेल-२ अप्टिकल दृश्यमा बादल ({cloud_pct}%) सीमा ({threshold}%) भन्दा बढी छ। रडार मात्र मोडमा अगाडि बढ्दै।"
+  busy: "प्रणाली हाल व्यस्त छ (लाम लम्बाइ: {queue_len})। कृपया केही समयपछि पुनः प्रयास गर्नुहोस्।"
+  internal: "आन्तरिक त्रुटि देखा पर्यो: {message}"
+
+labels:
+  flooded_area: "बाढी प्रभावित क्षेत्र"
+  buildings_affected: "प्रभावित भवनहरू"
+  road_km_affected: "प्रभावित सडक"
+  settlements_cut_off: "सम्पर्क टुटेका बस्तीहरू"
