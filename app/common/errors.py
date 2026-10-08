@@ -8,6 +8,10 @@ from typing import Any, Dict
 from contracts.schemas import ErrorCode, ErrorDetail
 
 
+class NonRetryableError(Exception):
+    """Marker mixin: errors that must not be retried (e.g. auth failures)."""
+
+
 class DyotakError(Exception):
     """Base exception for all domain errors."""
     def __init__(self, code: ErrorCode, message_key: str, params: Dict[str, Any] = None):
@@ -67,6 +71,25 @@ class OhsomeUnavailableError(DyotakError):
             message_key="errors.ohsome_unavailable",
             params={"details": details}
         )
+
+
+class CdseAuthError(NonRetryableError, CdseUnavailableError):
+    """CDSE authentication/authorization failure (401/403 or bad credentials).
+
+    Same error code as CDSE_UNAVAILABLE but never retried.
+    """
+
+    def __init__(self, status_code: int = None, details: str = None):
+        super().__init__(status_code=status_code, details=details)
+        self.message_key = "errors.cdse_auth_failed"
+
+
+class OhsomeAuthError(NonRetryableError, OhsomeUnavailableError):
+    """ohsome authentication/authorization failure (missing/invalid API key)."""
+
+    def __init__(self, details: str = None):
+        super().__init__(details=details)
+        self.message_key = "errors.ohsome_auth_failed"
 
 
 class ModelLowConfidenceError(DyotakError):

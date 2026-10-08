@@ -58,6 +58,14 @@ class OSMConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     snapshot_policy: str
     feature_filters: List[str]
+    # ohsome endpoint + transport tunables (added with pipeline/ohsome.py).
+    # v2 is the supported extraction API (v1 geometry is forbidden and v1 is
+    # scheduled for shutdown on 2026-11-30).
+    backend: str = "v2"
+    v2_base_url: str = "https://api.heigit.org/ohsome-api/v2-rc"
+    base_url: str = "https://api.ohsome.org/v1"
+    request_timeout_seconds: float = 60.0
+    retries: int = 3
 
 
 class DamageConfig(BaseModel):
@@ -144,6 +152,7 @@ class Settings(BaseSettings):
     # Secrets
     cdse_client_id: Optional[str] = None
     cdse_client_secret: Optional[str] = None
+    ohsome_api_key: Optional[str] = None
     gemini_api_key: Optional[str] = None
 
 

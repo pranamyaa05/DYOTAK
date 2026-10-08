@@ -8,3 +8,6 @@ uvicorn==0.30.3
 pydantic==2.13.5
 pydantic-settings==2.4.0
 PyYAML==6.0.3
+requests==2.34.2
+tifffile==2025.5.10
+rasterio==1.4.4

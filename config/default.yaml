@@ -40,6 +40,11 @@ osm:
     - "bridge"
     - "amenity"
     - "place"
+  backend: "v2" # origin: engineering (ohsome v2 extraction is the supported API; v1 geometry returns 403)
+  v2_base_url: "https://api.heigit.org/ohsome-api/v2-rc" # origin: engineering (ohsome v2 endpoint; requires DYOTAK_OHSOME_API_KEY)
+  base_url: "https://api.ohsome.org/v1" # origin: engineering (legacy v1 endpoint; shut down 2026-11-30)
+  request_timeout_seconds: 60.0 # origin: engineering (ohsome extraction of a small AOI)
+  retries: 3 # origin: engineering (transient ohsome failures)
 
 damage:
   affected_overlap_fraction: 0.25 # origin: calibrated(val_split) (Overlap for 'affected')
