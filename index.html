@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orbital Intelligence for Ground-Level Survival | Sentinel-1 SAR Flood Triage</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Fullscreen Animated SAR Canvas Background (z-index: -1) -->
+  <canvas id="flood-radar-bg"></canvas>
+  <div class="film-grain"></div>
+
+  <!-- Sticky Tactical Top Header -->
+  <header class="app-header">
+    <a href="#" class="brand-wrapper">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M12 3v6"/>
+          <path d="M12 15v6"/>
+          <path d="M3 12h6"/>
+          <path d="M15 12h6"/>
+        </svg>
+      </div>
+      <div class="brand-title">
+        <span>ORBITAL INTELLIGENCE</span>
+        <span class="sub">TRACK B: SAR FLOOD RAPID MAPPING</span>
+      </div>
+    </a>
+
+    <nav>
+      <ul class="nav-links">
+        <li><a href="#hero">Overview</a></li>
+        <li><a href="#live-map">Map Studio</a></li>
+        <li><a href="#triage">Damage Triage</a></li>
+        <li><a href="#routes">Evac Corridors</a></li>
+        <li><a href="#export">Copernicus Export</a></li>
+        <li><a href="#methodology">SAR Science</a></li>
+      </ul>
+    </nav>
+
+    <div class="header-telemetry">
+      <div class="sat-badge">
+        <span class="pulse-dot"></span>
+        <span>SENTINEL-1A SAR // PASS #428</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- SECTION 1: HERO OVERVIEW -->
+  <section id="hero" class="container hero-section">
+    <div class="hero-box">
+      <div class="hero-tag">
+        <span>COPERNICUS EMS // RAPID MAPPING PLATFORM</span>
+      </div>
+
+      <h1 class="hero-title">
+        Orbital Intelligence for <span class="accent-cyan">Ground-Level</span> Survival.
+      </h1>
+
+      <p class="hero-description">
+        When torrential storms blind optical satellites, <strong>Sentinel-1 C-Band synthetic aperture radar pierces the cloud cover</strong> to map flood extents in real time. We segment inundated terrain, pinpoint cut-off roads, and deliver clear vector corridors directly to emergency rescue teams.
+      </p>
+
+      <div class="hero-actions">
+        <a href="#live-map" class="btn btn-primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          Open Map Studio
+        </a>
+        <button class="btn btn-secondary" onclick="triggerManualSweep()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M12 2a10 10 0 0 1 10 10"/>
+          </svg>
+          Trigger Radar Sweep
+        </button>
+        <button class="btn btn-secondary" onclick="toggleBeforeAfter()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <line x1="12" y1="3" x2="12" y2="21"/>
+          </svg>
+          Toggle Divider
+        </button>
+      </div>
+
+      <div class="metric-row">
+        <div class="metric-item">
+          <div class="metric-number" style="color: var(--flood-blue);">148.6 <span class="metric-unit">km²</span></div>
+          <div class="metric-label">Inundated Extent</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-number" style="color: var(--damage-amber);">42 <span class="metric-unit">impacted</span></div>
+          <div class="metric-label">Damaged Structures</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-number" style="color: var(--danger-red);">14.8 <span class="metric-unit">km</span></div>
+          <div class="metric-label">Cut-off Roads</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-number" style="color: var(--safe-green);">9 <span class="metric-unit">nodes</span></div>
+          <div class="metric-label">Active Safe Evacs</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 2: INTERACTIVE MAP STUDIO -->
+  <section id="live-map" class="container map-studio-section">
+    <div class="section-header">
+      <div class="section-tag">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>
+        </svg>
+        <span>MAP STUDIO // SATELLITE COMPARISON ENGINE</span>
+      </div>
+      <h2 class="section-title">Synthetic Aperture Radar vs Pre-Disaster Optical</h2>
+      <p class="section-subtitle">
+        Drag the split slider to cross-examine pre-flood optical satellite imagery against Sentinel-1 radar backscatter and AI-segmented water masks. Drag or scroll to pan and zoom. Click any building to view damage parameters.
+      </p>
+    </div>
+
+    <div class="map-studio-layout">
+      <!-- Interactive Canvas Viewport -->
+      <div class="map-viewport-container">
+        <canvas id="studio-canvas"></canvas>
+
+        <div class="map-hud-overlay">
+          <div>ESA SENTINEL-1A // C-SAR</div>
+          <div>INCIDENCE ANGLE: 38.4° | POL: VV+VH</div>
+          <div>SPECULAR REFLECTION: -23.4 dB</div>
+        </div>
+
+        <!-- Before/After Split Slider -->
+        <div class="split-slider-control">
+          <span>OPTICAL</span>
+          <input type="range" id="split-range" min="0" max="100" value="50">
+          <span>SAR MASK</span>
+        </div>
+
+        <div class="map-controls-floating">
+          <button class="btn btn-secondary btn-sm" onclick="studio.zoom = Math.min(3, studio.zoom * 1.2); studio.render();">+</button>
+          <button class="btn btn-secondary btn-sm" onclick="studio.zoom = Math.max(0.6, studio.zoom / 1.2); studio.render();">-</button>
+          <button class="btn btn-secondary btn-sm" onclick="studio.zoom = 1.0; studio.pan = {x:0, y:0}; studio.render();">Reset</button>
+        </div>
+      </div>
+
+      <!-- Tactical Layer Sidebar -->
+      <div class="map-sidebar">
+        <div class="card">
+          <h3 style="font-size: 1rem; margin-bottom: 14px; font-weight: 700;">GIS Map Layers</h3>
+          <div class="layer-toggle-group">
+            <label class="layer-toggle-item">
+              <div class="layer-info">
+                <span class="layer-color-dot" style="background: var(--flood-blue);"></span>
+                <div>
+                  <div class="layer-name">AI Flood Mask</div>
+                  <div class="layer-type">Copernicus EMS Rapid Vector</div>
+                </div>
+              </div>
+              <input type="checkbox" data-layer="floodMask" checked>
+            </label>
+
+            <label class="layer-toggle-item">
+              <div class="layer-info">
+                <span class="layer-color-dot" style="background: var(--radar-cyan);"></span>
+                <div>
+                  <div class="layer-name">Sentinel-1 Radar</div>
+                  <div class="layer-type">C-Band Microwave (VV Backscatter)</div>
+                </div>
+              </div>
+              <input type="checkbox" data-layer="sar" checked>
+            </label>
+
+            <label class="layer-toggle-item">
+              <div class="layer-info">
+                <span class="layer-color-dot" style="background: #4ade80;"></span>
+                <div>
+                  <div class="layer-name">Pre-Flood Optical</div>
+                  <div class="layer-type">Sentinel-2 True Color RGB</div>
+                </div>
+              </div>
+              <input type="checkbox" data-layer="optical">
+            </label>
+
+            <label class="layer-toggle-item">
+              <div class="layer-info">
+                <span class="layer-color-dot" style="background: var(--danger-red);"></span>
+                <div>
+                  <div class="layer-name">Roads & Bridges</div>
+                  <div class="layer-type">OSM Highway Status</div>
+                </div>
+              </div>
+              <input type="checkbox" data-layer="roads" checked>
+            </label>
+
+            <label class="layer-toggle-item">
+              <div class="layer-info">
+                <span class="layer-color-dot" style="background: var(--damage-amber);"></span>
+                <div>
+                  <div class="layer-name">Building Footprints</div>
+                  <div class="layer-type">Inundation Damage Triage</div>
+                </div>
+              </div>
+              <input type="checkbox" data-layer="buildings" checked>
+            </label>
+
+            <label class="layer-toggle-item">
+              <div class="layer-info">
+                <span class="layer-color-dot" style="background: var(--safe-green);"></span>
+                <div>
+                  <div class="layer-name">Safe Rescue Hubs</div>
+                  <div class="layer-type">High Ground Beacons</div>
+                </div>
+              </div>
+              <input type="checkbox" data-layer="evacNodes" checked>
+            </label>
+          </div>
+        </div>
+
+        <div class="sensor-telemetry-box">
+          <div class="telemetry-item"><span class="k">SENSOR</span><span class="v">C-SAR (5.405 GHz)</span></div>
+          <div class="telemetry-item"><span class="k">ORBIT ALT</span><span class="v">693 km (Polar LEO)</span></div>
+          <div class="telemetry-item"><span class="k">SWATH WIDTH</span><span class="v">250 km (IW Mode)</span></div>
+          <div class="telemetry-item"><span class="k">RESOLUTION</span><span class="v">10m x 10m Pixel</span></div>
+          <div class="telemetry-item"><span class="k">CLOUD PENETRATION</span><span class="v" style="color: var(--safe-green);">100% OPERATIONAL</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 3: DAMAGE TRIAGE TABLE -->
+  <section id="triage" class="container damage-triage-section">
+    <div class="section-header">
+      <div class="section-tag">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        <span>STRUCTURE & INFRASTRUCTURE TRIAGE</span>
+      </div>
+      <h2 class="section-title">Critical Facility Impact Assessment</h2>
+      <p class="section-subtitle">
+        Automated spatial intersection between Sentinel-1 SAR flood polygons and OpenStreetMap critical infrastructure. Click any row to automatically pinpoint the structure on the satellite map.
+      </p>
+    </div>
+
+    <div class="triage-filter-bar">
+      <div class="filter-pills">
+        <button class="filter-btn active" data-filter="all">All Structures (8)</button>
+        <button class="filter-btn" data-filter="cutoff">Cut-Off / Severely Submerged</button>
+        <button class="filter-btn" data-filter="damaged">Damaged / Impacted</button>
+        <button class="filter-btn" data-filter="dry">Safe / High Ground</button>
+      </div>
+
+      <input type="text" id="triage-search" class="search-input" placeholder="Search by name, ID or facility...">
+    </div>
+
+    <div class="table-wrapper">
+      <table class="triage-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Facility Name</th>
+            <th>Type</th>
+            <th>Damage Status</th>
+            <th>Est. Water Depth</th>
+            <th>Vulnerability Priority</th>
+            <th>Coordinates</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="triage-tbody">
+          <tr data-id="BLD-102" data-status="cutoff">
+            <td style="font-family: var(--font-mono); color: var(--radar-cyan);">BLD-102</td>
+            <td><strong>Valley Primary School</strong></td>
+            <td>Education / Shelter</td>
+            <td><span class="status-badge-inline badge-danger">● Severely Submerged</span></td>
+            <td style="font-family: var(--font-mono);">1.40 m</td>
+            <td><span style="color: var(--danger-red); font-weight: 700;">P1 Critical</span></td>
+            <td style="font-family: var(--font-mono); font-size: 0.78rem;">44.4975°N, 11.3412°E</td>
+            <td><button class="btn btn-secondary btn-sm" style="padding: 4px 10px;">Locate</button></td>
+          </tr>
+          <tr data-id="BLD-104" data-status="cutoff">
+            <td style="font-family: var(--font-mono); color: var(--radar-cyan);">BLD-104</td>
+            <td><strong>Municipal Water Plant</strong></td>
+            <td>Critical Utility</td>
+            <td><span class="status-badge-inline badge-danger">● Submerged Inflow</span></td>
+            <td style="font-family: var(--font-mono);">1.75 m</td>
+            <td><span style="color: var(--danger-red); font-weight: 700;">P1 Critical</span></td>
+            <td style="font-family: var(--font-mono); font-size: 0.78rem;">44.4912°N, 11.3456°E</td>
+            <td><button class="btn btn-secondary btn-sm" style="padding: 4px 10px;">Locate</button></td>
+          </tr>
+          <tr data-id="BLD-101" data-status="damaged">
+            <td style="font-family: var(--font-mono); color: var(--radar-cyan);">BLD-101</td>
+            <td><strong>Riverview Medical Clinic</strong></td>
+            <td>Healthcare Facility</td>
+            <td><span class="status-badge-inline badge-warning">● Moderate Inundation</span></td>
+            <td style="font-family: var(--font-mono);">0.85 m</td>
+            <td><span style="color: var(--damage-amber); font-weight: 700;">P2 Urgent</span></td>
+            <td style="font-family: var(--font-mono); font-size: 0.78rem;">44.4938°N, 11.3387°E</td>
+            <td><button class="btn btn-secondary btn-sm" style="padding: 4px 10px;">Locate</button></td>
+          </tr>
+          <tr data-id="BLD-103" data-status="damaged">
+            <td style="font-family: var(--font-mono); color: var(--radar-cyan);">BLD-103</td>
+            <td><strong>North Power Substation</strong></td>
+            <td>Electrical Grid</td>
+            <td><span class="status-badge-inline badge-warning">● Perimeter Flooded</span></td>
+            <td style="font-family: var(--font-mono);">0.62 m</td>
+            <td><span style="color: var(--damage-amber); font-weight: 700;">P2 Urgent</span></td>
+            <td style="font-family: var(--font-mono); font-size: 0.78rem;">44.5020°N, 11.3285°E</td>
+            <td><button class="btn btn-secondary btn-sm" style="padding: 4px 10px;">Locate</button></td>
+          </tr>
+          <tr data-id="BLD-107" data-status="cutoff">
+            <td style="font-family: var(--font-mono); color: var(--radar-cyan);">BLD-107</td>
+            <td><strong>West Valley Grain Silo</strong></td>
+            <td>Agricultural Storage</td>
+            <td><span class="status-badge-inline badge-danger">● Cut-off by Water</span></td>
+            <td style="font-family: var(--font-mono);">1.20 m</td>
+            <td><span style="color: var(--damage-amber); font-weight: 700;">P2 Urgent</span></td>
+            <td style="font-family: var(--font-mono); font-size: 0.78rem;">44.4850°N, 11.3190°E</td>
+            <td><button class="btn btn-secondary btn-sm" style="padding: 4px 10px;">Locate</button></td>
+          </tr>
+          <tr data-id="BLD-108" data-status="damaged">
+            <td style="font-family: var(--font-mono); color: var(--radar-cyan);">BLD-108</td>
+            <td><strong>Fire Station #4</strong></td>
+            <td>Emergency Services</td>
+            <td><span class="status-badge-inline badge-warning">● Access Road Impassable</span></td>
+            <td style="font-family: var(--font-mono);">0.35 m</td>
+            <td><span style="color: #60a5fa; font-weight: 700;">P3 Monitored</span></td>
+            <td style="font-family: var(--font-mono); font-size: 0.78rem;">44.5060°N, 11.3520°E</td>
+            <td><button class="btn btn-secondary btn-sm" style="padding: 4px 10px;">Locate</button></td>
+          </tr>
+          <tr data-id="BLD-105" data-status="dry">
+            <td style="font-family: var(--font-mono); color: var(--radar-cyan);">BLD-105</td>
+            <td><strong>East Ridge Logistics Depot</strong></td>
+            <td>Staging Warehouse</td>
+            <td><span class="status-badge-inline badge-success">● Dry / High Ground</span></td>
+            <td style="font-family: var(--font-mono);">0.00 m</td>
+            <td><span style="color: var(--safe-green); font-weight: 700;">Safe Staging</span></td>
+            <td style="font-family: var(--font-mono); font-size: 0.78rem;">44.5150°N, 11.3680°E</td>
+            <td><button class="btn btn-secondary btn-sm" style="padding: 4px 10px;">Locate</button></td>
+          </tr>
+          <tr data-id="BLD-106" data-status="dry">
+            <td style="font-family: var(--font-mono); color: var(--radar-cyan);">BLD-106</td>
+            <td><strong>St. Jude Community Hall</strong></td>
+            <td>Shelter & Medical Hub</td>
+            <td><span class="status-badge-inline badge-success">● Dry / High Ground</span></td>
+            <td style="font-family: var(--font-mono);">0.00 m</td>
+            <td><span style="color: var(--safe-green); font-weight: 700;">Active Shelter</span></td>
+            <td style="font-family: var(--font-mono); font-size: 0.78rem;">44.5210°N, 11.3740°E</td>
+            <td><button class="btn btn-secondary btn-sm" style="padding: 4px 10px;">Locate</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- SECTION 4: FIRST RESPONDER EVACUATION CORRIDORS -->
+  <section id="routes" class="container routes-section">
+    <div class="section-header">
+      <div class="section-tag">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+        <span>FIRST RESPONDER DISPATCH & ROUTING</span>
+      </div>
+      <h2 class="section-title">Evacuation Corridors & Road Passability</h2>
+      <p class="section-subtitle">
+        Real-time route passability algorithms computed against digital elevation models and radar water vectors. Ensures rescue convoys avoid submerged bridges and washed-out roads.
+      </p>
+    </div>
+
+    <div class="routes-grid">
+      <!-- Corridor 1: Blocked Highway -->
+      <div class="card route-card blocked">
+        <div class="route-header">
+          <div class="route-name">Route 101 North Valley Highway</div>
+          <span class="status-badge-inline badge-danger">❌ IMPASSABLE</span>
+        </div>
+        <div class="route-details">
+          <p>Main river bridge submerged under 1.10m of turbulent flood waters. High risk of structural scouring. Civil defense barrier deployed.</p>
+        </div>
+        <div class="route-meta">
+          <span>LENGTH: 8.4 km</span>
+          <span style="color: var(--danger-red);">OBSTACLE: BRIDGE #4</span>
+        </div>
+        <div style="margin-top: 16px;">
+          <button class="btn btn-secondary btn-sm btn-inspect-route" data-route="RD-01">Inspect Road Vector</button>
+        </div>
+      </div>
+
+      <!-- Corridor 2: Clear High Ground -->
+      <div class="card route-card clear">
+        <div class="route-header">
+          <div class="route-name">East Ridge Escarpment Way</div>
+          <span class="status-badge-inline badge-success">✅ OPEN & RECOMMENDED</span>
+        </div>
+        <div class="route-details">
+          <p>Elevated ridgeway above the 100-year flood line (+45m contour). Paved surface fully dry. Recommended primary route for heavy rescue vehicles.</p>
+        </div>
+        <div class="route-meta">
+          <span>LENGTH: 12.2 km</span>
+          <span style="color: var(--safe-green);">STATUS: 100% CLEAR</span>
+        </div>
+        <div style="margin-top: 16px;">
+          <button class="btn btn-secondary btn-sm btn-inspect-route" data-route="RD-02">Dispatch Evac Convoys</button>
+        </div>
+      </div>
+
+      <!-- Corridor 3: Boat / Amphibious Only -->
+      <div class="card route-card caution">
+        <div class="route-header">
+          <div class="route-name">Canal Lowland Cut-Through</div>
+          <span class="status-badge-inline badge-warning">🚤 BOAT / AMPHIBIOUS ONLY</span>
+        </div>
+        <div class="route-details">
+          <p>Unpaved agricultural lane submerged under 0.6m slow-moving water. Vehicles stuck. Amphibious zodiac boats and shallow-draft rescue active.</p>
+        </div>
+        <div class="route-meta">
+          <span>LENGTH: 4.8 km</span>
+          <span style="color: var(--damage-amber);">UNIT: ZODIAC RESCUE</span>
+        </div>
+        <div style="margin-top: 16px;">
+          <button class="btn btn-secondary btn-sm btn-inspect-route" data-route="RD-03">Deploy Water Squad</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 5: COPERNICUS EMS EXPORT SUITE -->
+  <section id="export" class="container export-section">
+    <div class="section-header">
+      <div class="section-tag">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span>INTEROPERABILITY & EMERGENCY DISPATCH</span>
+      </div>
+      <h2 class="section-title">Copernicus EMS Export Suite</h2>
+      <p class="section-subtitle">
+        Export standardized geospatial data layers ready for immediate import into QGIS, ArcGIS, ATAK (Android Tactical Assault Kit), and UN-OCHA disaster response systems.
+      </p>
+    </div>
+
+    <div class="export-grid">
+      <div class="card export-card">
+        <div class="export-card-content">
+          <div class="export-card-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+            </svg>
+          </div>
+          <h3>GeoJSON Vector Extent</h3>
+          <p>Direct vector boundaries of detected flood water bodies, water depths, and confidence polygons for GIS software.</p>
+        </div>
+        <button id="btn-export-geojson" class="btn btn-primary btn-sm">
+          Download .geojson Layer
+        </button>
+      </div>
+
+      <div class="card export-card">
+        <div class="export-card-content">
+          <div class="export-card-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+          </div>
+          <h3>Damage Assessment CSV</h3>
+          <p>Triage tabular records of all 384 surveyed structures with coordinates, water depths, and urgency ratings.</p>
+        </div>
+        <button id="btn-export-csv" class="btn btn-secondary btn-sm">
+          Download .csv Triage
+        </button>
+      </div>
+
+      <div class="card export-card">
+        <div class="export-card-content">
+          <div class="export-card-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+          </div>
+          <h3>Copernicus SITREP Briefing</h3>
+          <p>Official Emergency Management Service (EMS) formatted situation report for local authorities and command centers.</p>
+        </div>
+        <button id="btn-open-sitrep" class="btn btn-secondary btn-sm">
+          View Emergency SITREP
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 6: METHODOLOGY & SCIENCE BRIEFING -->
+  <section id="methodology" class="container" style="padding-bottom: 80px;">
+    <div class="section-header">
+      <div class="section-tag">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        <span>TRACK B SCIENTIFIC PIPELINE</span>
+      </div>
+      <h2 class="section-title">Why Synthetic Aperture Radar (SAR)?</h2>
+    </div>
+
+    <div class="card" style="line-height: 1.7; font-size: 0.95rem; color: var(--text-muted);">
+      <p style="margin-bottom: 16px;">
+        During catastrophic flood events, severe cloud cover, dense precipitation, and nocturnal timing prevent optical sensors (such as Sentinel-2 or Landsat) from viewing the ground. Sentinel-1 operates an active <strong>C-band Synthetic Aperture Radar (5.405 GHz, ~5.6 cm wavelength)</strong> that illuminates the Earth with microwave pulses regardless of solar illumination or weather.
+      </p>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 20px;">
+        <div style="background: rgba(4, 9, 20, 0.6); padding: 16px; border-radius: 10px; border: 1px solid rgba(45, 156, 255, 0.15);">
+          <h4 style="color: var(--radar-cyan); font-family: var(--font-mono); margin-bottom: 8px;">1. Specular Reflection</h4>
+          <p style="font-size: 0.88rem;">Smooth water surfaces act as specular reflectors, bouncing the radar microwave energy away from the sensor. Water appears as distinct, low-backscatter black signatures (< -20 dB).</p>
+        </div>
+        <div style="background: rgba(4, 9, 20, 0.6); padding: 16px; border-radius: 10px; border: 1px solid rgba(45, 156, 255, 0.15);">
+          <h4 style="color: var(--radar-cyan); font-family: var(--font-mono); margin-bottom: 8px;">2. Double-Bounce Effect</h4>
+          <p style="font-size: 0.88rem;">When floodwaters enter built environments, corner reflectors between vertical building walls and horizontal water planes create intense radar double-bounce reflections.</p>
+        </div>
+        <div style="background: rgba(4, 9, 20, 0.6); padding: 16px; border-radius: 10px; border: 1px solid rgba(45, 156, 255, 0.15);">
+          <h4 style="color: var(--radar-cyan); font-family: var(--font-mono); margin-bottom: 8px;">3. Log-Ratio Otsu Segmentation</h4>
+          <p style="font-size: 0.88rem;">By performing radiometric calibration, Lee speckle filtering, and log-ratio change detection against pre-event baselines, flood polygons are extracted with >94% F1-score accuracy.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SITUATION REPORT MODAL -->
+  <div id="sitrep-modal" class="modal-backdrop">
+    <div class="modal-content">
+      <button id="sitrep-close" class="modal-close">&times;</button>
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 16px; margin-bottom: 20px;">
+        <div>
+          <span style="font-family: var(--font-mono); color: var(--radar-cyan); font-size: 0.75rem;">COPERNICUS EMS // EMERGENCY RAPID MAPPING</span>
+          <h2 style="font-size: 1.4rem; color: #ffffff;">EMSR-842: Flood Damage Situation Report</h2>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="window.print()">Print / Save PDF</button>
+      </div>
+
+      <div style="font-size: 0.9rem; line-height: 1.6; color: var(--text-muted);">
+        <p><strong>Activation Date:</strong> 2026-10-08 | <strong>Orbit Pass:</strong> Sentinel-1A Descending Pass #428</p>
+        <p><strong>Region of Interest:</strong> River Basin Sector 4 (Area: 480 km²)</p>
+        <hr style="border: none; border-top: 1px dashed rgba(255,255,255,0.1); margin: 16px 0;">
+
+        <h4 style="color: #ffffff; margin-bottom: 8px;">Executive Summary:</h4>
+        <p>Sentinel-1 radar imaging confirms <strong>148.6 km² of active flood inundation</strong>. The main river crest has exceeded historical high-water marks by +2.1 meters. 86 structures have been directly inundated, including Valley Primary School and the Municipal Water Treatment Plant.</p>
+
+        <h4 style="color: #ffffff; margin: 16px 0 8px;">Critical Priority Actions:</h4>
+        <ul style="padding-left: 20px;">
+          <li><strong style="color: var(--danger-red);">Highway 101 Bridge:</strong> Completely impassable. Route all supply convoys via East Ridge Escarpment Way.</li>
+          <li><strong style="color: var(--damage-amber);">Valley Primary School:</strong> Water depth estimated at 1.40m. Amphibious boat rescue recommended at staging point BOAT-02.</li>
+          <li><strong style="color: var(--safe-green);">Evacuation Hubs:</strong> High Ridge Heliport (EVAC-A1) and St. Jude Hall are 100% dry and receiving evacuees.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div class="footer-content">
+      <div>
+        <strong style="color: #ffffff;">Orbital Intelligence for Ground-Level Survival</strong>
+        <p style="margin-top: 4px;">Track B: Mapping Flood Damage from Space • ESA Sentinel-1 / Sentinel-2 / Copernicus EMS</p>
+      </div>
+      <div class="footer-tags">
+        <span>C-SAR // 5.405 GHz // VV+VH // ZERO DEPENDENCIES</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="FloodRadarBackground.js"></script>
+  <script src="map-studio.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

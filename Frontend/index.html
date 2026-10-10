@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EMSR-842 | Sentinel-1 SAR Flood Rapid Mapping — Copernicus EMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Fullscreen Animated SAR Canvas Background -->
+  <canvas id="flood-radar-bg"></canvas>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- TOPBAR: Copernicus EMS field-tool header                   -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <header class="app-header">
+    <!-- Brand -->
+    <div class="header-brand">
+      <div class="brand-esa-mark">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="10" cy="10" r="8"/>
+          <path d="M10 2v6M10 12v6M2 10h6M12 10h6"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <span class="brand-primary">COPERNICUS EMS</span>
+        <span class="brand-sub">EMSR-842 // SAR FLOOD RAPID MAPPING</span>
+      </div>
+    </div>
+
+    <!-- Center Nav -->
+    <nav class="header-nav">
+      <a href="#overview" class="nav-item active" data-en="Overview" data-ne="सिंहावलोकन">Overview</a>
+      <a href="#map-studio" class="nav-item" data-en="Map Studio" data-ne="नक्सा स्टुडियो">Map Studio</a>
+      <a href="#triage" class="nav-item" data-en="Damage Triage" data-ne="क्षति ट्रियाज">Damage Triage</a>
+      <a href="#corridors" class="nav-item" data-en="Evac Corridors" data-ne="निकासी मार्ग">Evac Corridors</a>
+      <a href="#export" class="nav-item" data-en="Export" data-ne="निर्यात">Export</a>
+    </nav>
+
+    <!-- Right Controls -->
+    <div class="header-controls">
+      <!-- Live feed badge -->
+      <div class="live-badge">
+        <span class="live-dot"></span>
+        <span>S1A PASS #428</span>
+      </div>
+
+      <!-- Bilingual Toggle EN / NE -->
+      <div class="lang-toggle" id="lang-toggle" title="Toggle language / भाषा परिवर्तन गर्नुहोस्">
+        <span class="lang-opt active" id="lang-en">EN</span>
+        <span class="lang-divider">/</span>
+        <span class="lang-opt" id="lang-ne">NE</span>
+      </div>
+
+      <!-- Preset Dropdown -->
+      <div class="preset-dropdown-wrap">
+        <button class="preset-btn" id="preset-toggle-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9"/>
+          </svg>
+          <span data-en="Presets" data-ne="प्रिसेट">Presets</span>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="preset-menu" id="preset-menu">
+          <div class="preset-menu-label">ACTIVE PRESET</div>
+          <button class="preset-item active" onclick="showToast('PRESET: Sentinel-1 IW VV+VH Active')">Sentinel-1 IW VV+VH</button>
+          <button class="preset-item" onclick="showToast('PRESET: SAR Flood Maximum Extent Active')">SAR Flood — Max Extent</button>
+          <button class="preset-item" onclick="showToast('PRESET: Infrastructure Triage Mode Active')">Infrastructure Triage</button>
+          <button class="preset-item" onclick="showToast('PRESET: Evac Routing Mode Active')">Evac Routing</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- STATUS STRIP: Tremor-style dense metric bar                 -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="status-strip">
+    <div class="status-strip-inner">
+      <div class="strip-metric">
+        <span class="strip-label" data-en="INUNDATED AREA" data-ne="डुबान क्षेत्र">INUNDATED AREA</span>
+        <span class="strip-value flood">148.6 km²</span>
+      </div>
+      <div class="strip-sep"></div>
+      <div class="strip-metric">
+        <span class="strip-label" data-en="DAMAGED STRUCTURES" data-ne="क्षतिग्रस्त संरचना">DAMAGED STRUCTURES</span>
+        <span class="strip-value amber">42 impacted</span>
+      </div>
+      <div class="strip-sep"></div>
+      <div class="strip-metric">
+        <span class="strip-label" data-en="CUT-OFF ROADS" data-ne="काटिएका सडकहरू">CUT-OFF ROADS</span>
+        <span class="strip-value danger">14.8 km</span>
+      </div>
+      <div class="strip-sep"></div>
+      <div class="strip-metric">
+        <span class="strip-label" data-en="ACTIVE EVAC NODES" data-ne="सक्रिय निकासी नोडहरू">ACTIVE EVAC NODES</span>
+        <span class="strip-value safe">9 nodes</span>
+      </div>
+      <div class="strip-sep"></div>
+      <div class="strip-metric">
+        <span class="strip-label" data-en="SAR PASS UTC" data-ne="SAR पास समय">SAR PASS UTC</span>
+        <span class="strip-value mono">2026-10-08 05:47Z</span>
+      </div>
+      <div class="strip-sep"></div>
+      <div class="strip-metric">
+        <span class="strip-label">CLOUD PENETRATION</span>
+        <span class="strip-value safe">100% // C-BAND</span>
+      </div>
+      <div class="strip-sep"></div>
+      <div class="strip-metric">
+        <span class="strip-label">ACTIVATION</span>
+        <span class="strip-value mono">EMSR-842</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 1: HERO OVERVIEW                                    -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section id="overview" class="page-section hero-section">
+    <div class="section-container">
+      <div class="hero-grid">
+        <!-- Left: Headline -->
+        <div class="hero-left">
+          <div class="hero-eyebrow">
+            <span class="eyebrow-tag" data-en="COPERNICUS EMS // RAPID MAPPING" data-ne="कोपर्निकस EMS // द्रुत म्यापिङ">COPERNICUS EMS // RAPID MAPPING</span>
+          </div>
+          <h1 class="hero-title" data-en="Orbital Intelligence for <em>Ground-Level</em> Survival." data-ne="<em>जमिनी</em> उत्तरजीविताका लागि कक्षीय बुद्धिमत्ता।">
+            Orbital Intelligence for <em>Ground-Level</em> Survival.
+          </h1>
+          <p class="hero-body" data-en="When torrential storms blind optical satellites, Sentinel-1 C-Band SAR pierces the cloud cover to map flood extents in real time — segmenting inundated terrain, pinpointing cut-off roads, and delivering vector corridors directly to emergency rescue teams." data-ne="जब भीषण आँधीले अप्टिकल उपग्रहलाई अन्धो बनाउँछ, Sentinel-1 C-Band SAR ले बादलको आवरण भेदेर वास्तविक समयमा बाढी क्षेत्र मापन गर्दछ।">
+            When torrential storms blind optical satellites, <strong>Sentinel-1 C-Band SAR pierces the cloud cover</strong> to map flood extents in real time — segmenting inundated terrain, pinpointing cut-off roads, and delivering vector corridors directly to emergency rescue teams.
+          </p>
+          <div class="hero-actions">
+            <a href="#map-studio" class="btn btn-primary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span data-en="Open Map Studio" data-ne="नक्सा स्टुडियो खोल्नुहोस्">Open Map Studio</span>
+            </a>
+            <button class="btn btn-ghost" onclick="triggerManualSweep()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
+              <span data-en="Trigger SAR Sweep" data-ne="SAR स्वीप ट्रिगर">Trigger SAR Sweep</span>
+            </button>
+            <button class="btn btn-ghost" onclick="toggleBeforeAfter()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="1"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+              <span data-en="Before / After" data-ne="अघि / पछि">Before / After</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Dense telemetry card -->
+        <div class="hero-right">
+          <div class="telem-card">
+            <div class="telem-card-header">
+              <span class="telem-card-title">SENTINEL-1A SENSOR PARAMETERS</span>
+              <span class="telem-badge online">ONLINE</span>
+            </div>
+            <div class="telem-rows">
+              <div class="telem-row">
+                <span class="telem-key">SENSOR</span>
+                <span class="telem-val">C-SAR // 5.405 GHz</span>
+              </div>
+              <div class="telem-row">
+                <span class="telem-key">ORBIT ALT</span>
+                <span class="telem-val">693 km (Polar LEO)</span>
+              </div>
+              <div class="telem-row">
+                <span class="telem-key">MODE</span>
+                <span class="telem-val">IW — Interferometric Wide</span>
+              </div>
+              <div class="telem-row">
+                <span class="telem-key">SWATH</span>
+                <span class="telem-val">250 km</span>
+              </div>
+              <div class="telem-row">
+                <span class="telem-key">RESOLUTION</span>
+                <span class="telem-val">10 m × 10 m</span>
+              </div>
+              <div class="telem-row">
+                <span class="telem-key">POLARIZATION</span>
+                <span class="telem-val">VV + VH Dual-Pol</span>
+              </div>
+              <div class="telem-row">
+                <span class="telem-key">INCIDENCE ANGLE</span>
+                <span class="telem-val">38.4°</span>
+              </div>
+              <div class="telem-row">
+                <span class="telem-key">CLOUD PENETRATION</span>
+                <span class="telem-val safe">100% OPERATIONAL</span>
+              </div>
+              <div class="telem-row">
+                <span class="telem-key">BACKSCATTER (WATER)</span>
+                <span class="telem-val flood">&lt; −20 dB (Specular)</span>
+              </div>
+              <div class="telem-row">
+                <span class="telem-key">ACCURACY (F1)</span>
+                <span class="telem-val safe">&gt; 94%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 2: INTERACTIVE MAP STUDIO                           -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section id="map-studio" class="page-section map-section">
+    <div class="section-container">
+      <div class="section-head">
+        <div class="section-eyebrow">MAP STUDIO // SAR vs OPTICAL COMPARISON ENGINE</div>
+        <h2 class="section-title" data-en="Synthetic Aperture Radar vs Pre-Disaster Optical" data-ne="SAR बनाम आपदा-पूर्व अप्टिकल">Synthetic Aperture Radar vs Pre-Disaster Optical</h2>
+        <p class="section-sub" data-en="Drag the split slider to cross-examine SAR backscatter against optical imagery. Click buildings to inspect damage." data-ne="SAR ब्याकस्क्याटर र अप्टिकल तस्विर तुलना गर्न स्लाइडर तान्नुहोस्।">Drag the split slider to cross-examine SAR backscatter against optical imagery. Click buildings to inspect damage parameters.</p>
+      </div>
+
+      <div class="map-layout">
+        <!-- Main Map Canvas Viewport -->
+        <div class="map-viewport" id="map-viewport">
+          <canvas id="studio-canvas"></canvas>
+
+          <!-- HUD Overlay (top-left) -->
+          <div class="map-hud">
+            <div class="hud-line">ESA SENTINEL-1A // C-SAR</div>
+            <div class="hud-line">INC: 38.4° | POL: VV+VH | PASS #428</div>
+            <div class="hud-line">BACKSCATTER: −23.4 dB // SPECULAR</div>
+          </div>
+
+          <!-- Coordinates HUD (bottom-left) -->
+          <div class="map-coord-hud">
+            <span id="map-coord-display">44.4975°N, 11.3412°E</span>
+          </div>
+
+          <!-- Before/After Slider (bottom-center) -->
+          <div class="split-control">
+            <span class="split-label">OPTICAL</span>
+            <input type="range" id="split-range" min="0" max="100" value="50">
+            <span class="split-label sar">SAR MASK</span>
+          </div>
+
+          <!-- Zoom Controls (top-right) -->
+          <div class="map-zoom-controls">
+            <button class="zoom-btn" onclick="studio.zoom = Math.min(3, studio.zoom * 1.2); studio.render();" title="Zoom in">+</button>
+            <button class="zoom-btn" onclick="studio.zoom = Math.max(0.6, studio.zoom / 1.2); studio.render();" title="Zoom out">−</button>
+            <button class="zoom-btn" onclick="studio.zoom = 1.0; studio.pan = {x:0, y:0}; studio.render();" title="Reset view">⊕</button>
+          </div>
+        </div>
+
+        <!-- Sidebar Panel -->
+        <div class="map-sidebar">
+          <!-- GIS Layer Control -->
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title" data-en="GIS LAYERS" data-ne="GIS तहरू">GIS LAYERS</span>
+              <span class="panel-count">6 active</span>
+            </div>
+            <div class="layer-list">
+              <label class="layer-row">
+                <div class="layer-meta">
+                  <span class="layer-swatch" style="background: #2D9CFF;"></span>
+                  <div class="layer-info">
+                    <span class="layer-name" data-en="AI Flood Mask" data-ne="AI बाढी मास्क">AI Flood Mask</span>
+                    <span class="layer-src">Copernicus EMS Rapid Vector</span>
+                  </div>
+                </div>
+                <input type="checkbox" data-layer="floodMask" checked class="layer-check">
+              </label>
+
+              <label class="layer-row">
+                <div class="layer-meta">
+                  <span class="layer-swatch" style="background: #00E5FF;"></span>
+                  <div class="layer-info">
+                    <span class="layer-name" data-en="Sentinel-1 SAR" data-ne="Sentinel-1 SAR">Sentinel-1 SAR</span>
+                    <span class="layer-src">C-Band VV Backscatter</span>
+                  </div>
+                </div>
+                <input type="checkbox" data-layer="sar" checked class="layer-check">
+              </label>
+
+              <label class="layer-row">
+                <div class="layer-meta">
+                  <span class="layer-swatch" style="background: #4ade80;"></span>
+                  <div class="layer-info">
+                    <span class="layer-name" data-en="Pre-Flood Optical" data-ne="बाढी-पूर्व अप्टिकल">Pre-Flood Optical</span>
+                    <span class="layer-src">Sentinel-2 True Color</span>
+                  </div>
+                </div>
+                <input type="checkbox" data-layer="optical" class="layer-check">
+              </label>
+
+              <label class="layer-row">
+                <div class="layer-meta">
+                  <span class="layer-swatch" style="background: #FF4D4D;"></span>
+                  <div class="layer-info">
+                    <span class="layer-name" data-en="Roads &amp; Bridges" data-ne="सडक र पुलहरू">Roads &amp; Bridges</span>
+                    <span class="layer-src">OSM Highway Status</span>
+                  </div>
+                </div>
+                <input type="checkbox" data-layer="roads" checked class="layer-check">
+              </label>
+
+              <label class="layer-row">
+                <div class="layer-meta">
+                  <span class="layer-swatch" style="background: #FFB347;"></span>
+                  <div class="layer-info">
+                    <span class="layer-name" data-en="Building Footprints" data-ne="भवन पदचिह्नहरू">Building Footprints</span>
+                    <span class="layer-src">Inundation Damage Triage</span>
+                  </div>
+                </div>
+                <input type="checkbox" data-layer="buildings" checked class="layer-check">
+              </label>
+
+              <label class="layer-row">
+                <div class="layer-meta">
+                  <span class="layer-swatch" style="background: #3DFF9A;"></span>
+                  <div class="layer-info">
+                    <span class="layer-name" data-en="Safe Rescue Hubs" data-ne="सुरक्षित उद्धार केन्द्रहरू">Safe Rescue Hubs</span>
+                    <span class="layer-src">High Ground Beacons</span>
+                  </div>
+                </div>
+                <input type="checkbox" data-layer="evacNodes" checked class="layer-check">
+              </label>
+            </div>
+          </div>
+
+          <!-- Legend -->
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title" data-en="DAMAGE LEGEND" data-ne="क्षति किंवदन्ती">DAMAGE LEGEND</span>
+            </div>
+            <div class="legend-list">
+              <div class="legend-item">
+                <span class="legend-dot" style="background:#FF4D4D;"></span>
+                <span class="legend-text" data-en="Severely Submerged / Cut-off" data-ne="गम्भीर रूपमा डुबेको / काटिएको">Severely Submerged / Cut-off</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot" style="background:#FFB347;"></span>
+                <span class="legend-text" data-en="Damaged / Partial Inundation" data-ne="क्षतिग्रस्त / आंशिक बाढी">Damaged / Partial Inundation</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot" style="background:#3DFF9A;"></span>
+                <span class="legend-text" data-en="Safe / High Ground" data-ne="सुरक्षित / उच्च भूमि">Safe / High Ground</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot" style="background:#2D9CFF; border-radius:2px;"></span>
+                <span class="legend-text" data-en="AI Flood Extent Polygon" data-ne="AI बाढी क्षेत्र बहुभुज">AI Flood Extent Polygon</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 3: DAMAGE TRIAGE TABLE                              -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section id="triage" class="page-section">
+    <div class="section-container">
+      <div class="section-head">
+        <div class="section-eyebrow" data-en="STRUCTURE & INFRASTRUCTURE TRIAGE" data-ne="संरचना र पूर्वाधार ट्रियाज">STRUCTURE &amp; INFRASTRUCTURE TRIAGE</div>
+        <h2 class="section-title" data-en="Critical Facility Impact Assessment" data-ne="महत्वपूर्ण सुविधा प्रभाव मूल्यांकन">Critical Facility Impact Assessment</h2>
+        <p class="section-sub" data-en="Automated spatial intersection between Sentinel-1 SAR flood polygons and OpenStreetMap critical infrastructure. Click any row to pinpoint the structure." data-ne="Sentinel-1 SAR बाढी बहुभुज र OSM पूर्वाधार बीचको स्वचालित स्थानिक प्रतिच्छेदन।">
+          Automated spatial intersection between Sentinel-1 SAR flood polygons and OpenStreetMap critical infrastructure. Click any row to pinpoint the structure.
+        </p>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="table-toolbar">
+        <div class="filter-group">
+          <button class="filter-pill active" data-filter="all" data-en="All (8)" data-ne="सबै (८)">All (8)</button>
+          <button class="filter-pill" data-filter="cutoff" data-en="Cut-Off / Submerged" data-ne="काटिएको / डुबेको">Cut-Off / Submerged</button>
+          <button class="filter-pill" data-filter="damaged" data-en="Damaged" data-ne="क्षतिग्रस्त">Damaged</button>
+          <button class="filter-pill" data-filter="dry" data-en="Safe / Dry" data-ne="सुरक्षित / सुख्खा">Safe / Dry</button>
+        </div>
+        <div class="search-wrap">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:#6b7a99; pointer-events:none;">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" id="triage-search" class="search-input" placeholder="Search ID, name, facility…">
+        </div>
+      </div>
+
+      <!-- Triage Table -->
+      <div class="table-container">
+        <table class="data-table" id="triage-table">
+          <thead>
+            <tr>
+              <th data-en="ID" data-ne="ID">ID</th>
+              <th data-en="Facility Name" data-ne="सुविधाको नाम">Facility Name</th>
+              <th data-en="Type" data-ne="प्रकार">Type</th>
+              <th data-en="Damage Status" data-ne="क्षति स्थिति">Damage Status</th>
+              <th data-en="Est. Depth" data-ne="अनुमानित गहिराई">Est. Depth</th>
+              <th data-en="Priority" data-ne="प्राथमिकता">Priority</th>
+              <th data-en="Coordinates" data-ne="निर्देशांकहरू">Coordinates</th>
+              <th data-en="Action" data-ne="कार्य">Action</th>
+            </tr>
+          </thead>
+          <tbody id="triage-tbody">
+            <tr data-id="BLD-102" data-status="cutoff">
+              <td class="mono id-cell">BLD-102</td>
+              <td><span class="facility-name" data-en="Valley Primary School" data-ne="भ्याली प्राइमरी स्कूल">Valley Primary School</span></td>
+              <td class="type-cell" data-en="Education / Shelter" data-ne="शिक्षा / आश्रय">Education / Shelter</td>
+              <td><span class="badge badge-danger" data-en="● Severely Submerged" data-ne="● गम्भीर डुबान">● Severely Submerged</span></td>
+              <td class="mono depth-danger">1.40 m</td>
+              <td><span class="priority-label p1" data-en="P1 Critical" data-ne="P1 अत्यावश्यक">P1 Critical</span></td>
+              <td class="mono coord-cell">44.4975°N, 11.3412°E</td>
+              <td><button class="btn-locate" data-en="Locate" data-ne="पत्ता लगाउनुहोस्">Locate</button></td>
+            </tr>
+            <tr data-id="BLD-104" data-status="cutoff">
+              <td class="mono id-cell">BLD-104</td>
+              <td><span class="facility-name" data-en="Municipal Water Plant" data-ne="नगरपालिका जल संयंत्र">Municipal Water Plant</span></td>
+              <td class="type-cell" data-en="Critical Utility" data-ne="महत्वपूर्ण उपयोगिता">Critical Utility</td>
+              <td><span class="badge badge-danger" data-en="● Submerged Inflow" data-ne="● डुबेको आवक">● Submerged Inflow</span></td>
+              <td class="mono depth-danger">1.75 m</td>
+              <td><span class="priority-label p1" data-en="P1 Critical" data-ne="P1 अत्यावश्यक">P1 Critical</span></td>
+              <td class="mono coord-cell">44.4912°N, 11.3456°E</td>
+              <td><button class="btn-locate" data-en="Locate" data-ne="पत्ता लगाउनुहोस्">Locate</button></td>
+            </tr>
+            <tr data-id="BLD-101" data-status="damaged">
+              <td class="mono id-cell">BLD-101</td>
+              <td><span class="facility-name" data-en="Riverview Medical Clinic" data-ne="रिभरभ्यू मेडिकल क्लिनिक">Riverview Medical Clinic</span></td>
+              <td class="type-cell" data-en="Healthcare" data-ne="स्वास्थ्यसेवा">Healthcare</td>
+              <td><span class="badge badge-warning" data-en="● Moderate Inundation" data-ne="● मध्यम बाढी">● Moderate Inundation</span></td>
+              <td class="mono depth-warning">0.85 m</td>
+              <td><span class="priority-label p2" data-en="P2 Urgent" data-ne="P2 अर्जेन्ट">P2 Urgent</span></td>
+              <td class="mono coord-cell">44.4938°N, 11.3387°E</td>
+              <td><button class="btn-locate" data-en="Locate" data-ne="पत्ता लगाउनुहोस्">Locate</button></td>
+            </tr>
+            <tr data-id="BLD-103" data-status="damaged">
+              <td class="mono id-cell">BLD-103</td>
+              <td><span class="facility-name" data-en="North Power Substation" data-ne="उत्तरी विद्युत उपकेन्द्र">North Power Substation</span></td>
+              <td class="type-cell" data-en="Electrical Grid" data-ne="विद्युत ग्रिड">Electrical Grid</td>
+              <td><span class="badge badge-warning" data-en="● Perimeter Flooded" data-ne="● परिधि बाढी">● Perimeter Flooded</span></td>
+              <td class="mono depth-warning">0.62 m</td>
+              <td><span class="priority-label p2" data-en="P2 Urgent" data-ne="P2 अर्जेन्ट">P2 Urgent</span></td>
+              <td class="mono coord-cell">44.5020°N, 11.3285°E</td>
+              <td><button class="btn-locate" data-en="Locate" data-ne="पत्ता लगाउनुहोस्">Locate</button></td>
+            </tr>
+            <tr data-id="BLD-107" data-status="cutoff">
+              <td class="mono id-cell">BLD-107</td>
+              <td><span class="facility-name" data-en="West Valley Grain Silo" data-ne="पश्चिम भ्याली अन्न साइलो">West Valley Grain Silo</span></td>
+              <td class="type-cell" data-en="Agricultural Storage" data-ne="कृषि भण्डारण">Agricultural Storage</td>
+              <td><span class="badge badge-danger" data-en="● Cut-off by Water" data-ne="● पानीले काटिएको">● Cut-off by Water</span></td>
+              <td class="mono depth-danger">1.20 m</td>
+              <td><span class="priority-label p2" data-en="P2 Urgent" data-ne="P2 अर्जेन्ट">P2 Urgent</span></td>
+              <td class="mono coord-cell">44.4850°N, 11.3190°E</td>
+              <td><button class="btn-locate" data-en="Locate" data-ne="पत्ता लगाउनुहोस्">Locate</button></td>
+            </tr>
+            <tr data-id="BLD-108" data-status="damaged">
+              <td class="mono id-cell">BLD-108</td>
+              <td><span class="facility-name" data-en="Fire Station #4" data-ne="दमकल केन्द्र #4">Fire Station #4</span></td>
+              <td class="type-cell" data-en="Emergency Services" data-ne="आपतकालीन सेवाहरू">Emergency Services</td>
+              <td><span class="badge badge-warning" data-en="● Access Road Impassable" data-ne="● पहुँच सडक अवरुद्ध">● Access Road Impassable</span></td>
+              <td class="mono depth-warning">0.35 m</td>
+              <td><span class="priority-label p3" data-en="P3 Monitored" data-ne="P3 निगरानी">P3 Monitored</span></td>
+              <td class="mono coord-cell">44.5060°N, 11.3520°E</td>
+              <td><button class="btn-locate" data-en="Locate" data-ne="पत्ता लगाउनुहोस्">Locate</button></td>
+            </tr>
+            <tr data-id="BLD-105" data-status="dry">
+              <td class="mono id-cell">BLD-105</td>
+              <td><span class="facility-name" data-en="East Ridge Logistics Depot" data-ne="पूर्व रिज लजिस्टिक्स डिपो">East Ridge Logistics Depot</span></td>
+              <td class="type-cell" data-en="Staging Warehouse" data-ne="स्टेजिङ गोदाम">Staging Warehouse</td>
+              <td><span class="badge badge-success" data-en="● Dry / High Ground" data-ne="● सुख्खा / उच्च भूमि">● Dry / High Ground</span></td>
+              <td class="mono">0.00 m</td>
+              <td><span class="priority-label safe" data-en="Safe Staging" data-ne="सुरक्षित स्टेजिङ">Safe Staging</span></td>
+              <td class="mono coord-cell">44.5150°N, 11.3680°E</td>
+              <td><button class="btn-locate" data-en="Locate" data-ne="पत्ता लगाउनुहोस्">Locate</button></td>
+            </tr>
+            <tr data-id="BLD-106" data-status="dry">
+              <td class="mono id-cell">BLD-106</td>
+              <td><span class="facility-name" data-en="St. Jude Community Hall" data-ne="सेन्ट जुड सामुदायिक हल">St. Jude Community Hall</span></td>
+              <td class="type-cell" data-en="Shelter &amp; Medical Hub" data-ne="आश्रय र चिकित्सा केन्द्र">Shelter &amp; Medical Hub</td>
+              <td><span class="badge badge-success" data-en="● Dry / High Ground" data-ne="● सुख्खा / उच्च भूमि">● Dry / High Ground</span></td>
+              <td class="mono">0.00 m</td>
+              <td><span class="priority-label safe" data-en="Active Shelter" data-ne="सक्रिय आश्रय">Active Shelter</span></td>
+              <td class="mono coord-cell">44.5210°N, 11.3740°E</td>
+              <td><button class="btn-locate" data-en="Locate" data-ne="पत्ता लगाउनुहोस्">Locate</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 4: EVACUATION CORRIDORS                             -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section id="corridors" class="page-section">
+    <div class="section-container">
+      <div class="section-head">
+        <div class="section-eyebrow" data-en="FIRST RESPONDER DISPATCH & ROUTING" data-ne="प्रथम प्रतिक्रियाकर्ता प्रेषण र रुटिङ">FIRST RESPONDER DISPATCH &amp; ROUTING</div>
+        <h2 class="section-title" data-en="Evacuation Corridors & Road Passability" data-ne="निकासी मार्गहरू र सडक पारगम्यता">Evacuation Corridors &amp; Road Passability</h2>
+        <p class="section-sub" data-en="Real-time passability algorithms computed against DEM and radar water vectors. Ensures rescue convoys avoid submerged bridges." data-ne="DEM र रडार जल वेक्टर विरुद्ध गणना गरिएको वास्तविक समय पारगम्यता एल्गोरिदम।">
+          Real-time route passability algorithms computed against digital elevation models and radar water vectors. Ensures rescue convoys avoid submerged bridges and washed-out roads.
+        </p>
+      </div>
+
+      <div class="corridors-grid">
+        <!-- Route 1: Blocked -->
+        <div class="corridor-card blocked">
+          <div class="corridor-status-bar"></div>
+          <div class="corridor-body">
+            <div class="corridor-header">
+              <div>
+                <div class="corridor-id">RD-01</div>
+                <div class="corridor-name" data-en="Route 101 North Valley Highway" data-ne="रुट १०१ उत्तर भ्याली राजमार्ग">Route 101 North Valley Highway</div>
+              </div>
+              <span class="badge badge-danger" data-en="❌ IMPASSABLE" data-ne="❌ अवरुद्ध">❌ IMPASSABLE</span>
+            </div>
+            <p class="corridor-desc" data-en="Main river bridge submerged under 1.10m of turbulent flood waters. High risk of structural scouring. Civil defense barrier deployed." data-ne="मुख्य नदी पुल १.१० मिटर बाढी पानीमुनि डुबेको। संरचनात्मक जोखिम उच्च।">
+              Main river bridge submerged under 1.10m of turbulent flood waters. High risk of structural scouring. Civil defense barrier deployed.
+            </p>
+            <div class="corridor-meta">
+              <div class="meta-row">
+                <span class="meta-key">LENGTH</span>
+                <span class="meta-val">8.4 km</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-key">OBSTACLE</span>
+                <span class="meta-val danger">BRIDGE #4 — SUBMERGED</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-key">WATER DEPTH</span>
+                <span class="meta-val danger">1.10 m</span>
+              </div>
+            </div>
+            <button class="btn-route btn-route-inspect btn-inspect-route" data-route="RD-01" data-en="Inspect Road Vector" data-ne="सडक वेक्टर निरीक्षण">Inspect Road Vector</button>
+          </div>
+        </div>
+
+        <!-- Route 2: Clear -->
+        <div class="corridor-card clear">
+          <div class="corridor-status-bar"></div>
+          <div class="corridor-body">
+            <div class="corridor-header">
+              <div>
+                <div class="corridor-id">RD-02</div>
+                <div class="corridor-name" data-en="East Ridge Escarpment Way" data-ne="पूर्व रिज एस्कार्पमेन्ट वे">East Ridge Escarpment Way</div>
+              </div>
+              <span class="badge badge-success" data-en="✅ OPEN — RECOMMENDED" data-ne="✅ खुला — सिफारिस">✅ OPEN — RECOMMENDED</span>
+            </div>
+            <p class="corridor-desc" data-en="Elevated ridgeway above the 100-year flood line (+45m contour). Paved surface fully dry. Primary route for heavy rescue vehicles." data-ne="१०० वर्षको बाढी रेखाभन्दा माथि उठेको रिजवे (+४५ मि.)। डामर सतह पूर्णतः सुख्खा।">
+              Elevated ridgeway above the 100-year flood line (+45m contour). Paved surface fully dry. Recommended primary route for heavy rescue vehicles.
+            </p>
+            <div class="corridor-meta">
+              <div class="meta-row">
+                <span class="meta-key">LENGTH</span>
+                <span class="meta-val">12.2 km</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-key">STATUS</span>
+                <span class="meta-val safe">100% CLEAR</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-key">ELEVATION</span>
+                <span class="meta-val">+45 m contour</span>
+              </div>
+            </div>
+            <button class="btn-route btn-route-dispatch btn-inspect-route" data-route="RD-02" data-en="Dispatch Evac Convoys" data-ne="निकासी काफिला पठाउनुहोस्">Dispatch Evac Convoys</button>
+          </div>
+        </div>
+
+        <!-- Route 3: Caution -->
+        <div class="corridor-card caution">
+          <div class="corridor-status-bar"></div>
+          <div class="corridor-body">
+            <div class="corridor-header">
+              <div>
+                <div class="corridor-id">RD-03</div>
+                <div class="corridor-name" data-en="Canal Lowland Cut-Through" data-ne="नहर तराई काटिएको मार्ग">Canal Lowland Cut-Through</div>
+              </div>
+              <span class="badge badge-warning" data-en="🚤 AMPHIBIOUS ONLY" data-ne="🚤 उभयचर मात्र">🚤 AMPHIBIOUS ONLY</span>
+            </div>
+            <p class="corridor-desc" data-en="Unpaved agricultural lane submerged under 0.6m slow-moving water. Vehicles stuck. Amphibious zodiac boats and shallow-draft rescue active." data-ne="अकल्चर लेन ०.६ मि. पानीमुनि। सवारी अड्किएका। उभयचर बोट सक्रिय।">
+              Unpaved agricultural lane submerged under 0.6m slow-moving water. Vehicles stuck. Amphibious zodiac boats and shallow-draft rescue active.
+            </p>
+            <div class="corridor-meta">
+              <div class="meta-row">
+                <span class="meta-key">LENGTH</span>
+                <span class="meta-val">4.8 km</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-key">UNIT</span>
+                <span class="meta-val amber">ZODIAC RESCUE ACTIVE</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-key">WATER DEPTH</span>
+                <span class="meta-val amber">0.60 m</span>
+              </div>
+            </div>
+            <button class="btn-route btn-route-deploy btn-inspect-route" data-route="RD-03" data-en="Deploy Water Squad" data-ne="जल दल तैनात">Deploy Water Squad</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 5: COPERNICUS EXPORT SUITE                          -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section id="export" class="page-section">
+    <div class="section-container">
+      <div class="section-head">
+        <div class="section-eyebrow" data-en="INTEROPERABILITY & EMERGENCY DISPATCH" data-ne="अन्तरसञ्चालनशीलता र आपतकालीन प्रेषण">INTEROPERABILITY &amp; EMERGENCY DISPATCH</div>
+        <h2 class="section-title" data-en="Copernicus EMS Export Suite" data-ne="कोपर्निकस EMS निर्यात सूट">Copernicus EMS Export Suite</h2>
+        <p class="section-sub" data-en="Export standardized geospatial layers ready for import into QGIS, ArcGIS, ATAK, and UN-OCHA systems." data-ne="QGIS, ArcGIS, ATAK र UN-OCHA प्रणालीहरूमा आयातको लागि मानकीकृत जियोस्पेशियल तहहरू निर्यात गर्नुहोस्।">
+          Export standardized geospatial data layers ready for immediate import into QGIS, ArcGIS, ATAK, and UN-OCHA disaster response systems.
+        </p>
+      </div>
+
+      <div class="export-grid">
+        <div class="export-card">
+          <div class="export-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+            </svg>
+          </div>
+          <div class="export-info">
+            <h3 class="export-title" data-en="GeoJSON Vector Extent" data-ne="GeoJSON वेक्टर विस्तार">GeoJSON Vector Extent</h3>
+            <p class="export-desc" data-en="Detected flood polygon boundaries with water depths and confidence values." data-ne="पानीको गहिराई र विश्वास मानहरू सहित पत्ता लगाइएको बाढी बहुभुज सीमाहरू।">Detected flood polygon boundaries with water depths and confidence values. Ready for QGIS / ArcGIS.</p>
+            <div class="export-meta">
+              <span class="export-tag">GeoJSON</span>
+              <span class="export-tag">CRS: WGS84</span>
+              <span class="export-tag">3 Features</span>
+            </div>
+          </div>
+          <button id="btn-export-geojson" class="btn btn-primary export-btn" data-en="Download .geojson" data-ne=".geojson डाउनलोड">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download .geojson
+          </button>
+        </div>
+
+        <div class="export-card">
+          <div class="export-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+          </div>
+          <div class="export-info">
+            <h3 class="export-title" data-en="Damage Assessment CSV" data-ne="क्षति मूल्यांकन CSV">Damage Assessment CSV</h3>
+            <p class="export-desc" data-en="Triage tabular records of all surveyed structures with coordinates and urgency ratings." data-ne="निर्देशांक र जरुरी मूल्यांकन सहित सबै सर्वेक्षण गरिएका संरचनाहरूको ट्रियाज रेकर्डहरू।">Triage tabular records of 384 surveyed structures with coordinates, water depths, and urgency ratings.</p>
+            <div class="export-meta">
+              <span class="export-tag">CSV</span>
+              <span class="export-tag">10 Records</span>
+              <span class="export-tag">UTF-8</span>
+            </div>
+          </div>
+          <button id="btn-export-csv" class="btn btn-ghost export-btn" data-en="Download .csv" data-ne=".csv डाउनलोड">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download .csv
+          </button>
+        </div>
+
+        <div class="export-card">
+          <div class="export-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="1"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+          </div>
+          <div class="export-info">
+            <h3 class="export-title" data-en="Copernicus SITREP Briefing" data-ne="कोपर्निकस SITREP ब्रिफिङ">Copernicus SITREP Briefing</h3>
+            <p class="export-desc" data-en="Official EMS formatted situation report for local authorities and command centers." data-ne="स्थानीय अधिकारीहरू र कमाण्ड केन्द्रहरूका लागि आधिकारिक EMS ढाँचाको स्थिति रिपोर्ट।">Official Emergency Management Service formatted situation report for local authorities and command centers.</p>
+            <div class="export-meta">
+              <span class="export-tag">PDF-ready</span>
+              <span class="export-tag">EMSR-842</span>
+            </div>
+          </div>
+          <button id="btn-open-sitrep" class="btn btn-ghost export-btn" data-en="View SITREP" data-ne="SITREP हेर्नुहोस्">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            View SITREP
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 6: SAR SCIENCE METHODOLOGY                          -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section id="methodology" class="page-section methodology-section">
+    <div class="section-container">
+      <div class="section-head">
+        <div class="section-eyebrow">TRACK B SCIENTIFIC PIPELINE</div>
+        <h2 class="section-title" data-en="Why Synthetic Aperture Radar (SAR)?" data-ne="SAR किन?">Why Synthetic Aperture Radar (SAR)?</h2>
+      </div>
+      <div class="method-cards">
+        <div class="method-card">
+          <div class="method-num">01</div>
+          <h4 class="method-title" data-en="Specular Reflection" data-ne="स्पेक्युलर परावर्तन">Specular Reflection</h4>
+          <p class="method-body" data-en="Smooth water surfaces act as specular reflectors, bouncing microwave energy away. Water appears as distinct low-backscatter signatures (< −20 dB)." data-ne="चिल्लो पानीको सतहले माइक्रोवेव ऊर्जा टाढा उछाल्छ। पानी कम-ब्याकस्क्याटर हस्ताक्षरको रूपमा देखिन्छ।">Smooth water surfaces act as specular reflectors, bouncing the radar microwave energy away from the sensor. Water appears as distinct, low-backscatter black signatures (&lt; −20 dB).</p>
+        </div>
+        <div class="method-card">
+          <div class="method-num">02</div>
+          <h4 class="method-title" data-en="Double-Bounce Effect" data-ne="डबल-बाउन्स प्रभाव">Double-Bounce Effect</h4>
+          <p class="method-body" data-en="Floodwaters in built environments create corner reflectors between vertical walls and horizontal water planes, causing intense radar double-bounce reflections." data-ne="निर्मित वातावरणमा बाढीको पानीले ठाडो पर्खाल र तेर्सो पानीको सतह बीच कर्नर रिफ्लेक्टर बनाउँछ।">When floodwaters enter built environments, corner reflectors between vertical building walls and horizontal water planes create intense radar double-bounce reflections.</p>
+        </div>
+        <div class="method-card">
+          <div class="method-num">03</div>
+          <h4 class="method-title" data-en="Log-Ratio Otsu Segmentation" data-ne="लग-अनुपात ओत्सु विभाजन">Log-Ratio Otsu Segmentation</h4>
+          <p class="method-body" data-en="Radiometric calibration, Lee speckle filtering, and log-ratio change detection against pre-event baselines extract flood polygons with >94% F1-score accuracy." data-ne="रेडियोमेट्रिक क्यालिब्रेसन, Lee स्पेकल फिल्टरिङ, र लग-अनुपात परिवर्तन पत्ता लगाउने क्रियाले >९४% F1-स्कोर सटीकतामा बाढी बहुभुज निकाल्छ।">By performing radiometric calibration, Lee speckle filtering, and log-ratio change detection against pre-event baselines, flood polygons are extracted with &gt;94% F1-score accuracy.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SITREP MODAL                                                -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div id="sitrep-modal" class="modal-backdrop">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <div>
+          <div class="modal-eyebrow">COPERNICUS EMS // EMERGENCY RAPID MAPPING</div>
+          <h2 class="modal-title">EMSR-842: Flood Damage Situation Report</h2>
+        </div>
+        <div class="modal-header-actions">
+          <button class="btn btn-primary btn-sm" onclick="window.print()">Print / PDF</button>
+          <button id="sitrep-close" class="modal-close-btn" aria-label="Close">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="sitrep-meta-row">
+          <span><strong>Activation Date:</strong> 2026-10-08</span>
+          <span><strong>Orbit Pass:</strong> S1A Descending #428</span>
+          <span><strong>Region:</strong> River Basin Sector 4 (480 km²)</span>
+          <span><strong>Classification:</strong> UNRESTRICTED</span>
+        </div>
+        <div class="sitrep-divider"></div>
+        <h4 class="sitrep-section-title">Executive Summary</h4>
+        <p class="sitrep-body">Sentinel-1 radar imaging confirms <strong>148.6 km² of active flood inundation</strong>. The main river crest has exceeded historical high-water marks by +2.1 meters. 86 structures have been directly inundated, including Valley Primary School and the Municipal Water Treatment Plant.</p>
+        <h4 class="sitrep-section-title" style="margin-top:20px;">Critical Priority Actions</h4>
+        <ul class="sitrep-list">
+          <li><strong class="danger">Highway 101 Bridge:</strong> Completely impassable. Route all supply convoys via East Ridge Escarpment Way.</li>
+          <li><strong class="amber">Valley Primary School:</strong> Water depth estimated at 1.40m. Amphibious boat rescue recommended at staging point BOAT-02.</li>
+          <li><strong class="safe">Evacuation Hubs:</strong> High Ridge Heliport (EVAC-A1) and St. Jude Hall are 100% dry and receiving evacuees.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- FOOTER                                                      -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <footer class="app-footer">
+    <div class="footer-inner">
+      <div class="footer-left">
+        <span class="footer-brand">ORBITAL INTELLIGENCE // TRACK B</span>
+        <span class="footer-sub">ESA Sentinel-1 / Sentinel-2 / Copernicus EMS — SAR Flood Rapid Mapping</span>
+      </div>
+      <div class="footer-right">
+        <span class="footer-tag">C-SAR // 5.405 GHz // VV+VH</span>
+        <span class="footer-tag">ZERO DEPENDENCIES</span>
+        <span class="footer-tag">EMSR-842</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Toast Notification -->
+  <div id="toast-notice" class="toast-notice"></div>
+
+  <!-- Scripts -->
+  <script src="FloodRadarBackground.js"></script>
+  <script src="map-studio.js"></script>
+  <script src="app.js"></script>
+
+  <!-- Micro-interaction & language toggle script (inline, self-contained) -->
+  <script>
+    // ── Language Toggle ──────────────────────────────────────────
+    (function() {
+      let currentLang = 'en';
+      const toggle = document.getElementById('lang-toggle');
+      const btnEn  = document.getElementById('lang-en');
+      const btnNe  = document.getElementById('lang-ne');
+
+      function applyLang(lang) {
+        currentLang = lang;
+        document.documentElement.setAttribute('data-lang', lang);
+
+        // Update toggle active states
+        btnEn.classList.toggle('active', lang === 'en');
+        btnNe.classList.toggle('active', lang === 'ne');
+
+        // Update all elements with data-en / data-ne attributes
+        document.querySelectorAll('[data-en][data-ne]').forEach(el => {
+          const txt = lang === 'en' ? el.getAttribute('data-en') : el.getAttribute('data-ne');
+          if (txt) {
+            // Avoid wiping child elements — only update text/html if element has no complex children
+            if (el.children.length === 0 || el.tagName === 'H1' || el.tagName === 'H2' || el.tagName === 'P') {
+              el.innerHTML = txt;
+            } else {
+              el.textContent = txt;
+            }
+          }
+        });
+
+        if (typeof showToast === 'function') {
+          showToast(lang === 'en' ? 'LANGUAGE: English (EN) Active' : 'भाषा: नेपाली (NE) सक्रिय');
+        }
+      }
+
+      toggle.addEventListener('click', function(e) {
+        applyLang(currentLang === 'en' ? 'ne' : 'en');
+      });
+    })();
+
+    // ── Preset Dropdown ──────────────────────────────────────────
+    (function() {
+      const btn  = document.getElementById('preset-toggle-btn');
+      const menu = document.getElementById('preset-menu');
+      if (!btn || !menu) return;
+
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const isOpen = menu.classList.contains('open');
+        menu.classList.toggle('open', !isOpen);
+        btn.classList.toggle('active', !isOpen);
+      });
+
+      document.addEventListener('click', function() {
+        menu.classList.remove('open');
+        btn.classList.remove('active');
+      });
+
+      menu.addEventListener('click', function(e) {
+        e.stopPropagation();
+        // Mark active preset
+        menu.querySelectorAll('.preset-item').forEach(i => i.classList.remove('active'));
+        if (e.target.classList.contains('preset-item')) {
+          e.target.classList.add('active');
+          menu.classList.remove('open');
+          btn.classList.remove('active');
+        }
+      });
+    })();
+
+    // ── Nav active highlight on scroll ──────────────────────────
+    (function() {
+      const sections = document.querySelectorAll('.page-section[id]');
+      const navLinks = document.querySelectorAll('.nav-item');
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            navLinks.forEach(link => {
+              link.classList.toggle('active', link.getAttribute('href') === '#' + entry.target.id);
+            });
+          }
+        });
+      }, { rootMargin: '-40% 0px -50% 0px' });
+
+      sections.forEach(sec => observer.observe(sec));
+    })();
+
+    // ── Map coordinate display simulation ────────────────────────
+    (function() {
+      const coordDisplay = document.getElementById('map-coord-display');
+      if (!coordDisplay) return;
+      const coords = [
+        '44.4975°N, 11.3412°E', '44.4938°N, 11.3387°E',
+        '44.5020°N, 11.3285°E', '44.4912°N, 11.3456°E',
+        '44.5150°N, 11.3680°E', '44.5210°N, 11.3740°E'
+      ];
+      let ci = 0;
+      setInterval(() => {
+        ci = (ci + 1) % coords.length;
+        coordDisplay.textContent = coords[ci];
+      }, 4000);
+    })();
+  </script>
+</body>
+</html>
