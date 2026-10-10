@@ -1,0 +1,512 @@
+{
+  "counts": {
+    "buildings_affected_in_settlements": 712,
+    "destinations_snapped": 5,
+    "destinations_total": 6,
+    "max_extra_distance_km": 9.5886,
+    "road_km_severed": 6.1745,
+    "roads_severed_edges": 47,
+    "settlements_newly_cut_off": 1,
+    "settlements_no_pre_event_access": 2,
+    "settlements_still_connected": 59,
+    "settlements_total": 62,
+    "settlements_unsnapped": 1
+  },
+  "graph": {
+    "destinations_snapped": 5,
+    "destinations_total": 6,
+    "edges": 5567,
+    "kept_edges": 5520,
+    "loop_segments": 0,
+    "nodes": 5079,
+    "severed_edges": 47,
+    "source_segments": 109385,
+    "total_length_km": 1770.902
+  },
+  "limitations": [],
+  "provenance": {
+    "bbox": [
+      85.15,
+      27.85,
+      85.35,
+      28.05
+    ],
+    "classes": {
+      "newly_cut_off": 1,
+      "no_pre_event_access": 2,
+      "still_connected": 59
+    },
+    "destination_rule": "amenity tagged isolation.facility_tags plus place nodes tagged isolation.destination_place_tags",
+    "destinations": [
+      "amenity/hospital",
+      "amenity/hospital",
+      "amenity/hospital",
+      "amenity/clinic",
+      "Kalika Community Hospital",
+      "amenity/hospital"
+    ],
+    "layer_rows": {
+      "amenity": 6,
+      "bridge": 102,
+      "building": 60024,
+      "highway": 3565,
+      "place": 93
+    },
+    "priority_buildings_weight": 1.0,
+    "priority_formula": "priority_buildings_weight * buildings_affected + priority_isolation_weight * severity_weights[class]",
+    "priority_isolation_weight": 2.0,
+    "settlement_radius_m": 1000.0,
+    "settlement_rule": "place nodes tagged isolation.place_tags",
+    "severance_rule": "edge removed when its length-weighted mean flood probability >= isolation.flood_threshold_edge",
+    "severity_weights": {
+      "newly_cut_off": 1.0,
+      "no_pre_event_access": 0.5,
+      "still_connected": 0.0
+    },
+    "snap_distance_m": 500.0
+  },
+  "records": [
+    {
+      "buildings_affected": 174,
+      "class": "newly_cut_off",
+      "extra_distance_km": null,
+      "name": "\u092c\u0947\u0924\u094d\u0930\u093e\u0935\u0924\u0940",
+      "priority_rank": 1
+    },
+    {
+      "buildings_affected": 173,
+      "class": "no_pre_event_access",
+      "extra_distance_km": null,
+      "name": "\u0928\u094c\u0935\u093f\u0938\u0947 \u092b\u093e\u0901\u091f",
+      "priority_rank": 2
+    },
+    {
+      "buildings_affected": 108,
+      "class": "still_connected",
+      "extra_distance_km": 9.588576,
+      "name": "\u092d\u0948\u0902\u0938\u0947",
+      "priority_rank": 3
+    },
+    {
+      "buildings_affected": 40,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "place/hamlet",
+      "priority_rank": 4
+    },
+    {
+      "buildings_affected": 40,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "place/hamlet",
+      "priority_rank": 5
+    },
+    {
+      "buildings_affected": 32,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "Ashmure",
+      "priority_rank": 6
+    },
+    {
+      "buildings_affected": 32,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u0925\u093e\u092a\u093e \u0917\u093e\u0909\u0901",
+      "priority_rank": 7
+    },
+    {
+      "buildings_affected": 19,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "place/hamlet",
+      "priority_rank": 8
+    },
+    {
+      "buildings_affected": 19,
+      "class": "still_connected",
+      "extra_distance_km": 0.762895,
+      "name": "\u0924\u093e\u0926\u0940",
+      "priority_rank": 9
+    },
+    {
+      "buildings_affected": 19,
+      "class": "still_connected",
+      "extra_distance_km": 0.828571,
+      "name": "\u092e\u093e\u0925\u093f\u0932\u094d\u0932\u094b \u091a\u094c\u0930",
+      "priority_rank": 10
+    },
+    {
+      "buildings_affected": 15,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u0932\u093f\u0916\u0941",
+      "priority_rank": 11
+    },
+    {
+      "buildings_affected": 15,
+      "class": "still_connected",
+      "extra_distance_km": 0.065315,
+      "name": "\u0936\u093e\u0928\u094d\u0924\u093f \u092c\u091c\u093e\u0930",
+      "priority_rank": 12
+    },
+    {
+      "buildings_affected": 3,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "place/hamlet",
+      "priority_rank": 13
+    },
+    {
+      "buildings_affected": 3,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "place/hamlet",
+      "priority_rank": 14
+    },
+    {
+      "buildings_affected": 3,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "place/hamlet",
+      "priority_rank": 15
+    },
+    {
+      "buildings_affected": 3,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "place/hamlet",
+      "priority_rank": 16
+    },
+    {
+      "buildings_affected": 3,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "place/hamlet",
+      "priority_rank": 17
+    },
+    {
+      "buildings_affected": 2,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "place/hamlet",
+      "priority_rank": 18
+    },
+    {
+      "buildings_affected": 2,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "place/hamlet",
+      "priority_rank": 19
+    },
+    {
+      "buildings_affected": 2,
+      "class": "still_connected",
+      "extra_distance_km": 0.065315,
+      "name": "\u0938\u093e\u0932\u093f\u092e \u092d\u093f\u0924\u094d\u0924\u093e",
+      "priority_rank": 20
+    },
+    {
+      "buildings_affected": 1,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "place/hamlet",
+      "priority_rank": 21
+    },
+    {
+      "buildings_affected": 1,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "place/hamlet",
+      "priority_rank": 22
+    },
+    {
+      "buildings_affected": 1,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "place/hamlet",
+      "priority_rank": 23
+    },
+    {
+      "buildings_affected": 1,
+      "class": "still_connected",
+      "extra_distance_km": 0.065315,
+      "name": "\u0905\u0930\u094d\u091a\u0932\u0947",
+      "priority_rank": 24
+    },
+    {
+      "buildings_affected": 1,
+      "class": "still_connected",
+      "extra_distance_km": 0.065315,
+      "name": "\u0938\u093f\u092e\u094d\u0932\u0947",
+      "priority_rank": 25
+    },
+    {
+      "buildings_affected": 0,
+      "class": "no_pre_event_access",
+      "extra_distance_km": null,
+      "name": "\u091a\u094d\u092f\u0941\u092a\u0930 \u0916\u094b\u0932\u093e",
+      "priority_rank": 26
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "place/hamlet",
+      "priority_rank": 27
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "place/hamlet",
+      "priority_rank": 28
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "place/hamlet",
+      "priority_rank": 29
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "place/hamlet",
+      "priority_rank": 30
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "place/hamlet",
+      "priority_rank": 31
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "place/hamlet",
+      "priority_rank": 32
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "place/hamlet",
+      "priority_rank": 33
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u0909\u0924\u094d\u0924\u0930\u0917\u092f\u093e",
+      "priority_rank": 34
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u090f\u0915\u094d\u092a\u093e\u0916\u0947",
+      "priority_rank": 35
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u0915\u092a\u094d\u0924\u093e\u0932\u0940",
+      "priority_rank": 36
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u0915\u093e\u091c\u093f\u0928 \u0921\u093e\u0901\u0921\u093e",
+      "priority_rank": 37
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u0915\u093e\u0930\u094d\u0915\u0940 \u0917\u093e\u0909\u0901",
+      "priority_rank": 38
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u0915\u093e\u0932\u093f\u0915\u093e",
+      "priority_rank": 39
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u0915\u094b\u092e\u0941",
+      "priority_rank": 40
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u0916\u093e\u0932\u091a\u0947\u0924",
+      "priority_rank": 41
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u0917\u0923\u0947\u0936\u0938\u094d\u0925\u093e\u0928",
+      "priority_rank": 42
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u0918\u093f\u091a\u0947\u0924",
+      "priority_rank": 43
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u0918\u093f\u091a\u0947\u0924 \u0918\u091f\u0947\u0932\u0941\u0919",
+      "priority_rank": 44
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u0918\u094b\u0930\u094d\u092e\u0941",
+      "priority_rank": 45
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.065315,
+      "name": "\u091d\u0930\u094d\u0915\u0932\u0947\u0930\u0940",
+      "priority_rank": 46
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u0921\u094b\u0917\u094d\u0932\u093e\u0919",
+      "priority_rank": 47
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u0922\u0941\u0919\u094d\u0917\u0947",
+      "priority_rank": 48
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u0925\u093e\u0919\u094d\u0938\u0947\u0928 \u092f\u0941\u0935\u093e",
+      "priority_rank": 49
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u0926\u0928\u0941\u0938\u094d\u0935\u093e\u0930\u093e",
+      "priority_rank": 50
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u0926\u093e\u0919\u092e\u093e\u0908",
+      "priority_rank": 51
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u0927\u0907\u092c\u0941\u0919",
+      "priority_rank": 52
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u0928\u094c\u0915\u0941\u0923\u094d\u0921",
+      "priority_rank": 53
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u092a\u091e\u094d\u091a\u0915\u0928\u094d\u092f\u093e",
+      "priority_rank": 54
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u092a\u0932\u094d\u0932\u094b \u0926\u093e\u0919\u092e\u093e\u0908",
+      "priority_rank": 55
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u092a\u093e\u0930\u091a\u094d\u092f\u093e\u0919\u094d\u0917",
+      "priority_rank": 56
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u092c\u0921\u0939\u0930\u0947",
+      "priority_rank": 57
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u092e\u093e\u0928\u094d\u0921\u0941\u091a\u0947\u091f",
+      "priority_rank": 58
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u092f\u0941\u092c\u094d\u0930\u093e",
+      "priority_rank": 59
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u0938\u0930\u0938\u093f\u0909",
+      "priority_rank": 60
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u0938\u093e\u0924\u0926\u094b\u092c\u093e\u091f\u094b",
+      "priority_rank": 61
+    },
+    {
+      "buildings_affected": 0,
+      "class": "still_connected",
+      "extra_distance_km": 0.0,
+      "name": "\u0938\u0942\u0930\u094d\u092f\u0917\u0922\u0940",
+      "priority_rank": 62
+    }
+  ],
+  "status": "ok",
+  "timings": {
+    "graph_s": 7.111,
+    "read_parquet_s": 0.163,
+    "snap_s": 0.033,
+    "solve_s": 0.188,
+    "total_s": 7.495
+  }
+}

@@ -13,7 +13,8 @@ Runs every external data path for an AOI and prints a PASS/FAIL/WARN/SKIP table:
   8. Sentinel-2 SCL clip: class histogram, valid fraction, cloud estimate
   9. ohsome pre-event OSM extraction (buildings, roads, bridges, health, places)
  10. Copernicus DEM 30m tiles (AWS)
- 11. disk cache round-trip
+ 11. baseline flood map: log-ratio change detection, exclusions, flood area
+ 12. disk cache round-trip
 
 Usage:
     python scripts/g0_spike.py                       # Trishuli preset
@@ -44,8 +45,10 @@ if str(REPO_ROOT) not in sys.path:
 import numpy as np  # noqa: E402
 import yaml  # noqa: E402
 
-from app.common.errors import DyotakError  # noqa: E402
-from app.pipeline import cdse, dem, ohsome  # noqa: E402
+from app.common.errors import DyotakError, NoValidOrbitPairError  # noqa: E402
+from app.pipeline import cdse, dem, flood_baseline, ohsome  # noqa: E402
+from app.pipeline.damage import classify_damage as dmg_classify_damage  # noqa: E402
+from app.pipeline.isolation import compute_isolation as iso_compute_isolation  # noqa: E402
 from app.pipeline.pairing import validate_and_pair_s1_scenes  # noqa: E402
 from app.settings import app_config, settings  # noqa: E402
 
@@ -120,51 +123,20 @@ S1_LOG_RATIO_MEDIAN_TOLERANCE_DB = 1.0
 def _split_s1_bands(arr) -> Tuple[List, Optional[np.ndarray]]:
     """Split a decoded Sentinel-1 clip into (value bands, dataMask).
 
-    The evalscript returns [VV, VH, dataMask]; older cached clips may still
-    return only [VV, VH]. tifffile may hand back (H, W, B) or (B, H, W).
+    Thin wrapper over app.pipeline.flood_baseline so the spike and the pipeline
+    share one decoder (the evalscript returns [VV, VH, dataMask]).
     """
-    if arr.ndim == 2:
-        return [arr], None
-    if arr.ndim == 3 and arr.shape[-1] in (2, 3):
-        bands = [arr[..., 0], arr[..., 1]]
-        return bands, (arr[..., 2] if arr.shape[-1] == 3 else None)
-    if arr.ndim == 3 and arr.shape[0] in (2, 3):
-        bands = [arr[0], arr[1]]
-        return bands, (arr[2] if arr.shape[0] == 3 else None)
-    return [arr], None
+    return flood_baseline.split_s1_bands(arr)
 
 
 def _decode_s1(data: bytes) -> Tuple[List, Optional[np.ndarray]]:
     """Decode a Sentinel-1 clip into (value bands, dataMask)."""
-    import io
-
-    import tifffile
-
-    return _split_s1_bands(np.asarray(tifffile.imread(io.BytesIO(data))))
+    return flood_baseline.decode_s1_clip(data)
 
 
 def _s1_band_masks(band, data_mask) -> dict:
-    """Boolean masks for one band: finite / inside dataMask / at floor / valid.
-
-    A pixel is usable when it is finite, inside the evalscript's dataMask, and
-    not sitting at the dB floor the evalscript clamps no-backscatter pixels to.
-    """
-    band = np.asarray(band, dtype=float)
-    finite = np.isfinite(band)
-    if data_mask is None:
-        masked_in = np.ones(band.shape, dtype=bool)
-    else:
-        mask = np.asarray(data_mask, dtype=float)
-        masked_in = (mask > 0) if mask.shape == band.shape else np.ones(
-            band.shape, dtype=bool
-        )
-    at_floor = band <= cdse.S1_DB_FLOOR
-    return {
-        "finite": finite,
-        "masked_in": masked_in,
-        "at_floor": at_floor,
-        "valid": finite & masked_in & ~at_floor,
-    }
+    """Per-band finite / in-dataMask / at-floor / valid masks (shared with the pipeline)."""
+    return flood_baseline.band_masks(band, data_mask)
 
 
 def s1_clip_band_stats(data: bytes, names: tuple = ("VV", "VH")) -> List[dict]:
@@ -300,32 +272,13 @@ def s1_log_ratio_should_warn(stats: List[dict]) -> Optional[str]:
 
 
 def s1_clip_grid(data: bytes) -> dict:
-    """Shape and WGS84 bounds of a clip, read from the GeoTIFF georeferencing."""
-    import rasterio
-    from rasterio.io import MemoryFile
-
-    with MemoryFile(data) as mem, mem.open() as ds:
-        bounds = ds.bounds
-        return {
-            "shape": (int(ds.height), int(ds.width)),
-            "bounds": tuple(
-                round(float(v), 9)
-                for v in (bounds.left, bounds.bottom, bounds.right, bounds.top)
-            ),
-            "crs": ds.crs.to_string() if ds.crs else None,
-        }
+    """Shape and WGS84 bounds of a clip (shared with app.pipeline.flood_baseline)."""
+    return flood_baseline.clip_grid(data)
 
 
-def grids_match(
-    post_grid: dict, pre_grid: dict, tolerance: float = 1e-6
-) -> Optional[str]:
+def grids_match(post_grid: dict, pre_grid: dict, tolerance: float = 1e-6) -> Optional[str]:
     """None when both clips share one grid (shape and bounds), else the reason."""
-    if post_grid["shape"] != pre_grid["shape"]:
-        return f"shape {post_grid['shape']} != {pre_grid['shape']}"
-    a, b = post_grid["bounds"], pre_grid["bounds"]
-    if any(abs(x - y) > tolerance for x, y in zip(a, b)):
-        return f"bounds {a} != {b}"
-    return None
+    return flood_baseline.grids_match(post_grid, pre_grid, tolerance)
 
 
 def select_s2_scene(scenes: List[dict], event_date: str) -> Optional[dict]:
@@ -703,7 +656,95 @@ def main(argv: Optional[List[str]] = None) -> int:
         )
     runner.run("copernicus dem 30m (range)", _dem)
 
-    # 11. cache round-trip
+    # 11. baseline flood map (log-ratio change detection + exclusions)
+    flood_result = None
+
+    def _flood_baseline():
+        nonlocal flood_result
+        if args.skip_clips:
+            return SKIP, "--skip-clips"
+        if not creds:
+            return SKIP, "no credentials"
+        if post_scene is None:
+            return SKIP, "no post scene"
+        pre_candidates = [s for s in s1_scenes if s["acquisition_time"][:10] < event_date]
+        try:
+            flood_result = flood_baseline.fetch_and_build_flood_map(
+                post_scene, pre_candidates, bbox=bbox
+            )
+        except NoValidOrbitPairError as exc:
+            return FAIL, f"NO_VALID_ORBIT_PAIR (refused, no map produced): {exc}"
+        counts = flood_result.counts
+        steps = " ".join(f"{name}={value}" for name, value in counts.items())
+        provenance = flood_result.provenance
+        head = (
+            f"threshold={flood_result.threshold_db:+.2f}dB ({flood_result.threshold_method}) "
+            f"pre_scenes={provenance['pre_scenes_used']} "
+            f"mask={counts['final_mask_pixels']}px area={flood_result.area_km2:.2f}km2 "
+            f"utm={flood_result.utm_epsg} polygons={len(flood_result.polygons['features'])}"
+        )
+        detail = (
+            f"{head} | {steps} | terrain_unknown={provenance['terrain_unknown_pixels']} "
+            f"limits={len(provenance['limitations'])}"
+        )
+        if flood_result.is_empty:
+            return WARN, f"{detail} [WARN no flooding detected above the threshold]"
+        return PASS, detail
+    runner.run("baseline flood map (steps + area)", _flood_baseline)
+
+    # 12. ohsome extraction cached for stages 6 and 7 (not the full g0 row)
+    extract_paths: dict[str, str] = {}
+    ohsome_for_stages_s = 0.0
+
+    def _ohsome_for_stages():
+        nonlocal extract_paths, ohsome_for_stages_s
+        if not creds:
+            return SKIP, "no credentials"
+        t0 = time.time()
+        paths = ohsome.fetch_preevent_osm_elements(
+            bbox, osm_snapshot, event_date,
+            feature_types=app_config.osm.feature_filters,
+            cache_root=app_config.cache.root_dir,
+        )
+        ohsome_for_stages_s = time.time() - t0
+        extract_paths = paths.get("parquet_paths", {})
+        return PASS, (
+            f"ohsome extracts ready for stages 6/7 ({len(extract_paths)} layers, "
+            f"{ohsome_for_stages_s:.2f}s)"
+        )
+    runner.run("ohsome extracts for stage 6/7", _ohsome_for_stages)
+
+    # 13. Stage 6 + 7 over the live AOI (road parquet read once by Stage 6 and reused)
+    def _stage_6_and_7():
+        if not creds or not post_scene or flood_result is None:
+            return SKIP, "no credentials / no post scene / no S1 baseline (stages 6/7 skipped)"
+        t0 = time.time()
+        damage_result = dmg_classify_damage(flood_result, extract_paths)
+        iso_result = iso_compute_isolation(flood_result, extract_paths, damage_result)
+        dt = time.time() - t0
+        d = damage_result.counts
+        i = iso_result.counts
+        t_dmg = damage_result.timings.get("total_s", dt)
+        t_iso = iso_result.timings.get("total_s", dt)
+        s6_plus_s7 = t_dmg + t_iso
+        line = (
+            f"STAGE 6+7  buildings_affected={d['buildings_affected']} "
+            f"buildings_possibly_affected={d['buildings_possibly_affected']} "
+            f"buildings_total={d['buildings_total']} "
+            f"road_km_affected={d['road_km_affected']:.3f} "
+            f"bridges_possibly_impacted={d['bridges_possibly_impacted']} "
+            f"settlements_cut_off={i['settlements_newly_cut_off']} "
+            f"settlements_still_connected={i['settlements_still_connected']} "
+            f"settlements_no_pre_event_access={i['settlements_no_pre_event_access']} "
+            f"road_km_severed={i['road_km_severed']:.4f} "
+            f"s6={t_dmg:.3f}s s7={t_iso:.3f}s s6+s7={s6_plus_s7:.3f}s"
+        )
+        return PASS, line
+    runner.run("stage 6 + stage 7 (damage + isolation)", _stage_6_and_7)
+
+
+
+    # 14. cache round-trip
     def _cache():
         wanted = []
         if not args.skip_clips and creds and post_scene is not None:
@@ -734,6 +775,35 @@ def main(argv: Optional[List[str]] = None) -> int:
         return FAIL, f"expected cache hits for {wanted}, got {served}"
     runner.run("disk cache round-trip", _cache)
 
+    # 13. Stage 6 + Stage 7 (damage + isolation) over the live AOI.
+    # The road parquet is read once by Stage 6 and re-used by Stage 7 (damage_result
+    # is passed in), so we measure the combined wall time and print the counts both
+    # stages computed. The heavy S1 clip fetch is excluded from this measurement.
+    def _stage_6_and_7():
+        if not creds or not post_scene or flood_result is None:
+            return SKIP, "no credentials / no post scene / no S1 baseline (stages 6/7 skipped)"
+        t0 = time.time()
+        damage_result = dmg.classify_damage(flood_result, extract_paths)
+        iso_result = iso.compute_isolation(flood_result, extract_paths, damage_result)
+        dt = time.time() - t0
+        d = damage_result.counts
+        i = iso_result.counts
+        t_dmg = damage_result.timings.get("total_s", dt)
+        t_iso = iso_result.timings.get("total_s", dt)
+        s6_plus_s7 = t_dmg + t_iso
+        line = (
+            f"STAGE 6+7  buildings_affected={d['buildings_affected']} "
+            f"buildings_possibly_affected={d['buildings_possibly_affected']} "
+            f"buildings_total={d['buildings_total']} "
+            f"road_km_affected={d['road_km_affected']:.3f} "
+            f"bridges_possibly_impacted={d['bridges_possibly_impacted']} "
+            f"settlements_cut_off={i['settlements_newly_cut_off']} "
+            f"settlements_still_connected={i['settlements_still_connected']} "
+            f"settlements_no_pre_event_access={i['settlements_no_pre_event_access']} "
+            f"road_km_severed={i['road_km_severed']:.4f} "
+            f"s6={t_dmg:.3f}s s7={t_iso:.3f}s s6+s7={s6_plus_s7:.3f}s"
+        )
+        return PASS, line
     return runner.render()
 
 

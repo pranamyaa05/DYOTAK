@@ -28,10 +28,25 @@ flood:
   tile_size: 512 # origin: engineering (GPU/CPU memory tiling chunk)
   overlap_pixels: 64 # origin: engineering (Cosine blending border)
   speckle_filter_size: 3 # origin: literature (Lee / median 3x3 filter kernel)
+  # Baseline log-ratio change detection (app/pipeline/flood_baseline.py).
+  vv_weight: 0.5 # origin: engineering (equal weight in the combined VV+VH log-ratio)
+  vh_weight: 0.5 # origin: engineering (VH is more sensitive to open water, VV to surface roughness)
+  otsu_histogram_bins: 256 # origin: engineering (histogram resolution for the Otsu split on the log-ratio)
+  otsu_fallback_min_db: -6.0 # origin: literature (C-band S1 water log-ratio drops cluster in ~-1..-6 dB; 6 dB is a conservative floor)
+  otsu_fallback_max_db: -1.0 # origin: literature (upper end of the reported S1 log-ratio water range)
+  probability_scale_db: 1.0 # origin: engineering (logistic slope of the probability ramp: 1 dB below the split -> ~0.73)
+  permanent_water_vv_max_db: -16.0 # origin: measured (G0 Trishuli clips: open water sits at the VV 1st percentile, -16.6 dB)
+  permanent_water_vh_max_db: -22.0 # origin: measured (G0 Trishuli clips: open water sits at the VH 1st percentile, -22.7 dB)
+  min_component_size_px: 9 # origin: engineering (3x3 px at 20 m ~ 0.36 ha; removes isolated speckle remnants)
+  area_sanity_min_km2: 0.01 # origin: engineering (integration-test plausibility bound: ~25 px at 20 m)
+  area_sanity_max_km2: 200.0 # origin: engineering (integrity bound; the Trishuli AOI itself is ~437 km2)
+  s1_look_azimuth_ascending_deg: 90.0 # origin: engineering (right-looking IW, ascending heading ~N -> look to the E)
+  s1_look_azimuth_descending_deg: 270.0 # origin: engineering (right-looking IW, descending heading ~S -> look to the W)
 
 terrain:
   slope_cutoff_degrees: 15.0 # origin: literature (Radar layover & steep slope false positive masking)
   hand_cutoff_m: 15.0 # origin: calibrated(val_split) (Height Above Nearest Drainage flood envelope)
+  radar_shadow_slope_degrees: 52.0 # origin: literature (single-sided range slope beyond 90 deg - incidence (38 deg) -> shadow/layover)
 
 optical:
   cloud_limit_pct: 20.0 # origin: engineering (Threshold above which S2 is discarded as cloudy)
@@ -54,18 +69,39 @@ osm:
 damage:
   affected_overlap_fraction: 0.25 # origin: calibrated(val_split) (Overlap for 'affected')
   possibly_affected_overlap_fraction: 0.05 # origin: calibrated(val_split) (Overlap for 'possibly_affected')
-  bridge_buffer_m: 15.0 # origin: engineering (Geometric alignment margin)
+  bridge_buffer_m: 15.0 # origin: engineering (half-width of the corridor sampled along a bridge line; a bridge is one pixel wide, so a bare line would sample almost nothing)
+  confidence_high_margin: 0.20 # origin: engineering (flooded-fraction distance from the nearest status boundary above which the status is unambiguous)
+  confidence_medium_margin: 0.05 # origin: engineering (below this the footprint straddles a status boundary -> low confidence tier)
+  road_sample_spacing_m: 20.0 # origin: engineering (one road sample per flood-map pixel at the 20 m fetch resolution)
 
 isolation:
-  flood_threshold_edge: 0.50 # origin: engineering (Edge severance threshold)
+  # A road segment is severed when its LENGTH-WEIGHTED MEAN flood probability is
+  # at or above this value (a mean, not a maximum: a long road clipping one
+  # flooded pixel is not severed).
+  flood_threshold_edge: 0.50 # origin: engineering (same cut as flood.probability_threshold: one definition of "flooded" in the pipeline)
   settlement_snap_distance_m: 500.0 # origin: engineering (Max distance to snap place node to road)
   facility_tags:
     - "hospital"
     - "clinic"
+  # Settlements that are classified (place nodes are the attachment units of
+  # ARCHITECTURE 4.7; building clusters are not implemented).
   place_tags:
     - "town"
     - "village"
     - "hamlet"
+  # Place nodes that act as DESTINATIONS ("hospitals/clinics and towns",
+  # ARCHITECTURE 4.7). Kept separate from place_tags so a hamlet is a settlement
+  # to classify, not a service destination.
+  destination_place_tags:
+    - "town"
+  # Isolation severity fed into the priority score (0..1 per class).
+  severity_weights:
+    newly_cut_off: 1.0 # origin: engineering (flood-caused loss of access is the rescue case)
+    no_pre_event_access: 0.5 # origin: engineering (access was already absent pre-event; listed, but not attributed to the flood)
+    still_connected: 0.0 # origin: engineering (access remains; only extra distance differs)
+  settlement_radius_m: 1000.0 # origin: engineering (radius around a place node used to count damaged buildings)
+  priority_buildings_weight: 1.0 # origin: engineering (weight of damaged buildings in the priority score)
+  priority_isolation_weight: 2.0 # origin: engineering (weight of cut-off severity; a cut-off settlement outranks building counts alone)
 
 upstream:
   accumulation_threshold: 1000 # origin: engineering (D8 flow accumulation river threshold)

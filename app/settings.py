@@ -43,12 +43,27 @@ class FloodConfig(BaseModel):
     tile_size: int
     overlap_pixels: int
     speckle_filter_size: int
+    # Baseline log-ratio change detection (app/pipeline/flood_baseline.py).
+    vv_weight: float
+    vh_weight: float
+    otsu_histogram_bins: int
+    otsu_fallback_min_db: float
+    otsu_fallback_max_db: float
+    probability_scale_db: float
+    permanent_water_vv_max_db: float
+    permanent_water_vh_max_db: float
+    min_component_size_px: int
+    area_sanity_min_km2: float
+    area_sanity_max_km2: float
+    s1_look_azimuth_ascending_deg: float
+    s1_look_azimuth_descending_deg: float
 
 
 class TerrainConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     slope_cutoff_degrees: float
     hand_cutoff_m: float
+    radar_shadow_slope_degrees: float
 
 
 class OpticalConfig(BaseModel):
@@ -76,6 +91,9 @@ class DamageConfig(BaseModel):
     affected_overlap_fraction: float
     possibly_affected_overlap_fraction: float
     bridge_buffer_m: float
+    confidence_high_margin: float
+    confidence_medium_margin: float
+    road_sample_spacing_m: float
 
 
 class IsolationConfig(BaseModel):
@@ -84,6 +102,14 @@ class IsolationConfig(BaseModel):
     settlement_snap_distance_m: float
     facility_tags: List[str]
     place_tags: List[str]
+    # Place tags that act as destinations (ARCHITECTURE 4.7: "hospitals/clinics
+    # and towns"), separate from the settlements that are classified.
+    destination_place_tags: List[str]
+    # Isolation severity per settlement class, used by the priority score.
+    severity_weights: Dict[str, float]
+    settlement_radius_m: float
+    priority_buildings_weight: float
+    priority_isolation_weight: float
 
 
 class UpstreamConfig(BaseModel):

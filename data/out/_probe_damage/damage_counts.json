@@ -1,0 +1,66 @@
+{
+  "counts": {
+    "bridges_non_road_total": 3,
+    "bridges_possibly_impacted": 27,
+    "bridges_road_total": 99,
+    "bridges_total": 102,
+    "bridges_unaffected": 75,
+    "buildings_affected": 1246,
+    "buildings_possibly_affected": 0,
+    "buildings_total": 60024,
+    "buildings_unaffected": 58778,
+    "road_km_affected": 31.061,
+    "road_km_flooded": 23.1008,
+    "road_km_total": 1802.0113,
+    "roads_affected": 113,
+    "roads_possibly_affected": 89,
+    "roads_total": 3565
+  },
+  "limitations": [
+    "87.5% of 60024 building footprints are smaller than one flood-map pixel and were sampled at a representative point (confidence capped at medium)"
+  ],
+  "provenance": {
+    "affected_overlap_fraction": 0.25,
+    "bbox": [
+      85.15,
+      27.85,
+      85.35,
+      28.05
+    ],
+    "bridge_buffer_m": 15.0,
+    "building_sampling": {
+      "centroid": 52512,
+      "footprint": 7512,
+      "rasterise_all_touched": false
+    },
+    "confidence_high_margin": 0.2,
+    "confidence_medium_margin": 0.05,
+    "dropped_geometry_rows": 0,
+    "flooded_probability_threshold": 0.5,
+    "layer_geometry_note": "the GeoJSON layers carry only affected/possibly features; unaffected features are counted in counts and reported in facts.json",
+    "layer_rows": {
+      "amenity": 6,
+      "bridge": 102,
+      "building": 60024,
+      "highway": 3565,
+      "place": 93
+    },
+    "layers": {
+      "amenity": "data\\cache\\raw\\osm\\e4\\e46ae41aeeecceb3f9046dab.parquet",
+      "bridge": "data\\cache\\raw\\osm\\d6\\d6795275a286af8fc4500415.parquet",
+      "building": "data\\cache\\raw\\osm\\3e\\3e859d238d4e0533431f398e.parquet",
+      "highway": "data\\cache\\raw\\osm\\bc\\bc9369ccc268271f6d6a59f2.parquet",
+      "place": "data\\cache\\raw\\osm\\43\\4368827dfa2c2956acfc0c83.parquet"
+    },
+    "possibly_affected_overlap_fraction": 0.05,
+    "road_sample_spacing_m": 20.0
+  },
+  "timings": {
+    "bridges_s": 0.457,
+    "buildings_s": 6.323,
+    "read_parquet_s": 0.23,
+    "roads_s": 10.29,
+    "total_s": 17.325
+  },
+  "utm_epsg": 32645
+}
