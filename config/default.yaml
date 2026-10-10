@@ -13,10 +13,15 @@ pairing:
   allow_degraded_offsets: true # origin: engineering (Permits older same-orbit pre-scenes if needed)
 
 fetch:
-  resolution_m: 10.0 # origin: literature (Sentinel-1 GRD IW native pixel spacing)
+  resolution_m: 20.0 # origin: literature (Sentinel-1 GRD IW native pixel spacing)
   timeout_seconds: 60.0 # origin: engineering (CDSE process API clip budget)
   retries: 3 # origin: engineering (CDSE rate limit resilience)
   backoff_factor: 1.5 # origin: engineering
+  # Sentinel-2 STAC `datetime` is the datatake START, but the AOI is sensed
+  # minutes later; the clip window must cover the whole datatake. Measured on
+  # the Trishuli AOI: +60s and +10min returned empty (all-nodata) mosaics,
+  # +30min returned data.
+  s2_datatake_window_seconds: 1800.0 # origin: measured (live S2 SCL clips: +60s and +10min empty, +30min returned data)
 
 flood:
   probability_threshold: 0.50 # origin: calibrated(kuro_siwo_val) (Optimal F1 cutoff)

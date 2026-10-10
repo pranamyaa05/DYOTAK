@@ -92,6 +92,15 @@ class OhsomeAuthError(NonRetryableError, OhsomeUnavailableError):
         self.message_key = "errors.ohsome_auth_failed"
 
 
+class OhsomeRequestError(NonRetryableError, OhsomeUnavailableError):
+    """ohsome rejected the request with a non-auth 4xx (e.g. HTTP 422).
+
+    Never retried: a malformed or unsupported request cannot succeed on a
+    second attempt. Keeps the OHSOME_UNAVAILABLE code; the full (untruncated)
+    response body is carried in ``details``.
+    """
+
+
 class ModelLowConfidenceError(DyotakError):
     def __init__(self, mean_confidence: float = None):
         super().__init__(

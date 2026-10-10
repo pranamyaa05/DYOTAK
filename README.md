@@ -22,6 +22,15 @@ Pre-event OSM extraction uses the ohsome **v2** Extraction API
 **requires a free API key** (sign up at <https://api.heigit.org>). Without
 `DYOTAK_OHSOME_API_KEY` the G0 spike reports the ohsome check as **SKIP**.
 
+v2 requires **timezone-aware ISO-8601 UTC** timestamps for `time.start` and
+`time.end`, and **`end > start`**: a bare date or `start == end` returns
+**HTTP 422**. The client therefore sends a point window (`start == end`) first
+and, on 422, retries **once** with a one-day window (`end = start + 1 day`, still
+before the event date). The form that succeeded is recorded in the result's
+`time_window.form` provenance (`day_range` in practice) and printed by the G0
+spike. Per-type feature counts are read from the GeoParquet response with
+`pyarrow`.
+
 The legacy ohsome v1 `elements/geometry` endpoint currently answers **HTTP 403**
 and v1 is scheduled for shutdown on 2026-11-30. A documented Overpass API
 `[date:"…"]` attic fallback (for use if ohsome fails during judging) lives in

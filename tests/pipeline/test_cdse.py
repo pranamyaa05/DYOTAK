@@ -1,12 +1,15 @@
 """Unit tests for app.pipeline.cdse (no network; helpers and cache only)."""
 
+import datetime as dt
 import io
 
 import numpy as np
 import pytest
+import tifffile
 
 from app.common.errors import CdseAuthError, CdseUnavailableError
 from app.pipeline import cdse
+from app.settings import app_config
 
 BBOX = [85.15, 27.85, 85.35, 28.05]
 ACQ = "2024-09-29T00:25:11Z"
@@ -100,12 +103,76 @@ def test_build_s2_scl_request():
     assert "SCL" in req["evalscript"]
 
 
+def test_build_s2_scl_request_spans_the_whole_datatake():
+    # The STAC datetime is the datatake *start*; a narrow window around it
+    # returns an empty (all-nodata) mosaic, so the window must cover the whole
+    # datatake (which lasts ~20-25 min). The span is config, not a code constant.
+    req = cdse.build_s2_scl_process_request(BBOX, ACQ, 50, 60)
+    window = req["input"]["data"][0]["dataFilter"]["timeRange"]
+    assert window["from"] == ACQ
+    start = dt.datetime.fromisoformat(ACQ.replace("Z", "+00:00"))
+    end = dt.datetime.fromisoformat(window["to"].replace("Z", "+00:00"))
+    span = (end - start).total_seconds()
+    assert span >= 20 * 60
+    assert span == app_config.fetch.s2_datatake_window_seconds
+    assert cdse.s2_datatake_window_seconds() == span
+
+
+def test_s2_datatake_window_is_read_from_config(monkeypatch):
+    # fetch.s2_datatake_window_seconds is read at call time, so config changes
+    # take effect without touching the code.
+    monkeypatch.setattr(app_config.fetch, "s2_datatake_window_seconds", 60.0)
+    assert cdse.s2_datatake_window_seconds() == 60.0
+    req = cdse.build_s2_scl_process_request(BBOX, ACQ, 50, 60)
+    window = req["input"]["data"][0]["dataFilter"]["timeRange"]
+    assert window["to"] == "2024-09-29T00:26:11Z"  # ACQ + 60s
+
+
+def test_s1_evalscript_requests_data_mask():
+    assert "dataMask" in cdse.S1_DB_EVALSCRIPT
+    assert "bands: 3" in cdse.S1_DB_EVALSCRIPT
+    req = cdse.build_s1_process_request(BBOX, ACQ, 100, 100)
+    assert req["output"]["width"] == 100  # still the requested grid
+    # The mask is a third band on top of VV/VH.
+    assert "samples.dataMask" in req["evalscript"]
+
+
 def test_processing_version_tracks_processing():
     a = cdse.build_s1_process_request(BBOX, ACQ, 100, 100)
     b = cdse.build_s1_process_request(BBOX, ACQ, 100, 100, back_coeff="SIGMA0_ELLIPSOID")
     c = cdse.build_s1_process_request(BBOX, ACQ, 200, 200)
-    assert cdse._processing_version(a) == cdse._processing_version(c)  # size not versioned
+    assert cdse._processing_version(a) == cdse._processing_version(c)  # size lives in the key
     assert cdse._processing_version(a) != cdse._processing_version(b)  # processing is
+
+
+def test_processing_version_tracks_time_window():
+    # Changing the time window changes the pixels, so it must invalidate the cache.
+    a = cdse.build_s2_scl_process_request(BBOX, ACQ, 50, 60)
+    b = cdse.build_s2_scl_process_request(BBOX, ACQ, 50, 60)
+    b["input"]["data"][0]["dataFilter"]["timeRange"] = {
+        "from": ACQ,
+        "to": "2024-09-29T00:26:11Z",
+    }
+    assert cdse._processing_version(a) != cdse._processing_version(b)
+
+
+def test_s1_cache_key_changes_with_output_resolution(tmp_path, monkeypatch):
+    # Same scene/bbox at two resolutions must not share a cache file (otherwise a
+    # 10 m clip is served for a 20 m request).
+    monkeypatch.setattr(cdse, "_post_process", lambda payload, timeout: b"II*\x00x")
+    scene = {"scene_id": "s1", "acquisition_time": ACQ, "orbit_direction": "DESCENDING"}
+    a = cdse.fetch_s1_clip(BBOX, scene, resolution_m=10.0, cache_root=str(tmp_path))
+    b = cdse.fetch_s1_clip(BBOX, scene, resolution_m=20.0, cache_root=str(tmp_path))
+    assert a.path != b.path
+    assert a.from_cache is False and b.from_cache is False
+
+
+def test_s2_scl_cache_key_changes_with_output_resolution(tmp_path, monkeypatch):
+    monkeypatch.setattr(cdse, "_post_process", lambda payload, timeout: b"II*\x00x")
+    scene = {"scene_id": "s2", "acquisition_time": ACQ, "cloud_pct": 5.0}
+    a = cdse.fetch_s2_scl_clip(BBOX, scene, resolution_m=20.0, cache_root=str(tmp_path))
+    b = cdse.fetch_s2_scl_clip(BBOX, scene, resolution_m=40.0, cache_root=str(tmp_path))
+    assert a.path != b.path
 
 
 # --- cloud estimate ---------------------------------------------------------
@@ -121,8 +188,40 @@ def test_cloud_pct_from_scl_ignores_nodata_and_shadow():
     assert cdse.cloud_pct_from_scl(scl) == pytest.approx(50.0)
 
 
-def test_cloud_pct_from_scl_all_nodata():
-    assert cdse.cloud_pct_from_scl(np.zeros((3, 3), dtype=int)) == 0.0
+def test_cloud_pct_from_scl_all_nodata_is_none(caplog):
+    # A clip with zero valid pixels has undefined cloud cover, never 0.0.
+    import logging
+
+    with caplog.at_level(logging.WARNING, logger="dyotak.cdse"):
+        assert cdse.cloud_pct_from_scl(np.zeros((3, 3), dtype=int)) is None
+    assert any("zero valid pixels" in r.message for r in caplog.records)
+
+
+def test_estimate_cloud_pct_none_for_all_nodata_clip():
+    buf = io.BytesIO()
+    tifffile.imwrite(buf, np.zeros((4, 4), dtype="float32"), photometric="minisblack")
+    clip = cdse.ClipResult(buf.getvalue(), None, False)
+    assert cdse.estimate_cloud_pct(clip) is None
+
+
+def test_scl_class_histogram_counts_and_valid_fraction():
+    scl = np.array([[0, 0, 1, 8], [9, 10, 4, 4]])
+    hist = cdse.scl_class_histogram(scl)
+    assert hist["total"] == 8
+    assert hist["valid"] == 6
+    assert hist["valid_pct"] == pytest.approx(75.0)
+    assert set(hist["counts"]) == set(range(12))
+    assert hist["counts"][0] == 2
+    assert hist["counts"][4] == 2
+    assert hist["counts"][8] == 1
+    assert hist["counts"][11] == 0
+
+
+def test_scl_class_histogram_all_nodata():
+    hist = cdse.scl_class_histogram(np.zeros((2, 2), dtype=int))
+    assert hist["valid"] == 0
+    assert hist["valid_pct"] == 0.0
+    assert hist["counts"][0] == 4
 
 
 # --- caching -----------------------------------------------------------------
@@ -146,6 +245,23 @@ def test_fetch_s1_clip_caches_on_disk(tmp_path, monkeypatch):
     assert second.from_cache is True
     assert second.data == fake_tiff
     assert calls["n"] == 1  # network hit exactly once
+
+
+def test_fetch_s1_clip_reports_progress_instead_of_printing(tmp_path, monkeypatch, capsys):
+    # The old print() is gone: progress goes to the caller (and the logger).
+    monkeypatch.setattr(cdse, "_post_process", lambda payload, timeout: b"II*\x00x")
+    messages = []
+    scene = {"scene_id": "s1-scene", "acquisition_time": ACQ, "orbit_direction": "DESCENDING"}
+    first = cdse.fetch_s1_clip(BBOX, scene, cache_root=str(tmp_path), progress=messages.append)
+    assert first.from_cache is False
+    assert len(messages) == 1
+    assert "Downloading S1 radar clip" in messages[0]
+    assert "s1-scene" in messages[0]
+    assert capsys.readouterr().out == ""  # nothing printed to stdout
+
+    # The cached re-fetch downloads nothing, so it reports nothing.
+    cdse.fetch_s1_clip(BBOX, scene, cache_root=str(tmp_path), progress=messages.append)
+    assert len(messages) == 1
 
 
 def test_cache_key_changes_with_scene_time(tmp_path, monkeypatch):

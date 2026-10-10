@@ -43,7 +43,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import requests
 
@@ -76,6 +76,24 @@ CDSE_STAC_S2_COLLECTION = "sentinel-2-l2a"
 S1_BACKSCATTER_COEFFICIENT = "GAMMA0_ELLIPSOID"
 S1_DEM_INSTANCE = "COPERNICUS_30"
 
+# dB value produced by the evalscript's floor clamp: 10*log10(1e-6) = -60 dB.
+# Pixels at the floor carry no usable backscatter and are treated as nodata.
+S1_DB_FLOOR = -60.0
+
+
+def s2_datatake_window_seconds() -> float:
+    """Span of the Sentinel-2 clip time window, from config.
+
+    The STAC `datetime` is the *datatake* start, but a given AOI is sensed some
+    minutes later (a datatake lasts ~20-25 min), so a narrow window around the
+    datatake start returns an empty, all-nodata mosaic. Widening the window to
+    cover the whole datatake makes the scene actually contribute pixels. The
+    measured value (and how it was measured) lives in config/default.yaml as
+    `fetch.s2_datatake_window_seconds`.
+    """
+    return float(app_config.fetch.s2_datatake_window_seconds)
+
+
 # SCL classes that count as cloud in the S2 cloud estimate.
 S2_SCL_CLOUD_CLASSES = (8, 9, 10)  # medium prob, high prob, cirrus
 S2_SCL_SHADOW_CLASS = 3
@@ -85,8 +103,8 @@ S2_SCL_NODATA = 0
 S1_DB_EVALSCRIPT = """//VERSION=3
 function setup() {
   return {
-    input: ["VV", "VH"],
-    output: { bands: 2, sampleType: "FLOAT32" }
+    input: ["VV", "VH", "dataMask"],
+    output: { bands: 3, sampleType: "FLOAT32" }
   };
 }
 function toDb(linear) {
@@ -94,7 +112,9 @@ function toDb(linear) {
   return 10 * Math.log(Math.max(linear, 1e-6)) / Math.LN10;
 }
 function evaluatePixel(samples) {
-  return [toDb(samples.VV), toDb(samples.VH)];
+  // Band 3 is the dataMask (1 = valid, 0 = nodata) so nodata is explicit
+  // instead of having to be inferred from the clamped dB floor.
+  return [toDb(samples.VV), toDb(samples.VH), samples.dataMask];
 }
 """
 
@@ -217,7 +237,7 @@ def _utc_iso(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _iso_plus_seconds(iso: str, seconds: int) -> str:
+def _iso_plus_seconds(iso: str, seconds: float) -> str:
     dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
     return _utc_iso(dt + timedelta(seconds=seconds))
 
@@ -246,15 +266,18 @@ def _bbox_to_output_size(bbox: List[float], resolution_m: float) -> tuple[int, i
 
 
 def _processing_version(payload: Dict[str, Any]) -> str:
-    """Short hash of the parts that change the pixels (not the time window)."""
+    """Short hash of the request parts that change the pixels.
+
+    The full dataFilter is included (time window included): changing the window
+    changes which scene/pixels are returned, so the cached clip must be
+    invalidated. The output pixel grid is not hashed here but is part of the
+    cache key through the `product` component (see fetch_s1_clip /
+    fetch_s2_scl_clip), so a resolution change also yields a fresh fetch.
+    """
     material = {
         "evalscript": payload.get("evalscript"),
         "processing": payload["input"]["data"][0].get("processing"),
-        "dataFilter": {
-            k: v
-            for k, v in payload["input"]["data"][0].get("dataFilter", {}).items()
-            if k != "timeRange"
-        },
+        "dataFilter": payload["input"]["data"][0].get("dataFilter", {}),
         "crs": payload["input"]["bounds"]["properties"].get("crs"),
     }
     encoded = json.dumps(material, sort_keys=True).encode("utf-8")
@@ -465,7 +488,9 @@ def build_s2_scl_process_request(
                             "from": _utc_iso(
                                 datetime.fromisoformat(acquisition_time.replace("Z", "+00:00"))
                             ),
-                            "to": _iso_plus_seconds(acquisition_time, 60),
+                            "to": _iso_plus_seconds(
+                                acquisition_time, s2_datatake_window_seconds()
+                            ),
                         },
                     },
                 }
@@ -529,11 +554,15 @@ def fetch_s1_clip(
     polarization: str = "DV",
     dem_instance: str = S1_DEM_INSTANCE,
     cache_root: Optional[str] = None,
+    progress: Optional[Callable[[str], None]] = None,
 ) -> ClipResult:
     """Fetch a Sentinel-1 VV/VH clip (orthorectified, dB), cached on disk.
 
     `scene` must carry acquisition_time and (optionally) orbit_direction, as
     returned by search_sentinel1_scenes.
+
+    `progress` is an optional callback for long-running job systems; the same
+    message is always written to the module logger.
     """
     res = resolution_m or app_config.fetch.resolution_m
     width, height = _bbox_to_output_size(bbox, res)
@@ -546,7 +575,10 @@ def fetch_s1_clip(
         dem_instance=dem_instance,
         orbit_direction=scene.get("orbit_direction"),
     )
-    product = f"sentinel-1-grd:{polarization}:{S1_BACKSCATTER_COEFFICIENT}:{dem_instance}:dB"
+    product = (
+        f"sentinel-1-grd:{polarization}:{S1_BACKSCATTER_COEFFICIENT}:{dem_instance}:dB"
+        f":{width}x{height}"
+    )
     version = _processing_version(payload)
     key = compute_raw_clip_key(bbox, scene["acquisition_time"], product, version)
     path = raw_cache_path(_cache_root(cache_root), "s1", key, ".tif")
@@ -556,6 +588,13 @@ def fetch_s1_clip(
         return ClipResult(cached, path, True, width, height, {"cache_key": key})
 
     logger.info("CDSE S1 clip fetch scene=%s bbox=%s", scene.get("scene_id"), bbox)
+    message = (
+        f"Downloading S1 radar clip for bbox {bbox} at {res:g}m resolution "
+        f"(scene {scene.get('scene_id')}); this may take a few seconds"
+    )
+    if progress is not None:
+        progress(message)
+    logger.info("%s", message)
     data = _post_process(payload, app_config.fetch.timeout_seconds)
     write_cached_bytes(path, data)
     return ClipResult(
@@ -579,7 +618,7 @@ def fetch_s2_scl_clip(
     """Fetch a Sentinel-2 L2A Scene Classification Layer clip, cached on disk."""
     width, height = _bbox_to_output_size(bbox, resolution_m)
     payload = build_s2_scl_process_request(bbox, scene["acquisition_time"], width, height)
-    product = "sentinel-2-l2a:SCL"
+    product = f"sentinel-2-l2a:SCL:{width}x{height}"
     version = _processing_version(payload)
     key = compute_raw_clip_key(bbox, scene["acquisition_time"], product, version)
     path = raw_cache_path(_cache_root(cache_root), "s2", key, ".tif")
@@ -614,19 +653,48 @@ def read_raster_band(data: bytes):
     return array
 
 
-def cloud_pct_from_scl(scl) -> float:
-    """Fraction (%) of valid SCL pixels that are cloud (classes 8/9/10)."""
+def cloud_pct_from_scl(scl) -> Optional[float]:
+    """Fraction (%) of valid SCL pixels that are cloud (classes 8/9/10).
+
+    Returns ``None`` (never 0.0) when the clip has zero valid pixels: an empty
+    or all-nodata clip means cloud cover is undefined, not 0%.
+    """
     import numpy as np
 
     arr = np.asarray(scl)
     valid = arr != S2_SCL_NODATA
     valid_count = int(valid.sum())
     if valid_count == 0:
-        return 0.0
+        logger.warning(
+            "S2 SCL clip has zero valid pixels (all class %d); cloud cover is "
+            "undefined, returning None",
+            S2_SCL_NODATA,
+        )
+        return None
     cloud = np.isin(arr, S2_SCL_CLOUD_CLASSES) & valid
     return round(100.0 * float(cloud.sum()) / valid_count, 2)
 
 
-def estimate_cloud_pct(clip: ClipResult) -> float:
-    """Cloud cover % for a fetched S2 SCL clip."""
+def estimate_cloud_pct(clip: ClipResult) -> Optional[float]:
+    """Cloud cover % (or None when undefined) for a fetched S2 SCL clip."""
     return cloud_pct_from_scl(read_raster_band(clip.data))
+
+
+def scl_class_histogram(scl) -> Dict[str, Any]:
+    """Per-class pixel counts (SCL classes 0-11) and the valid-pixel fraction.
+
+    ``valid_pct`` is the percentage of pixels that are not nodata (class 0),
+    which is the denominator the cloud estimate uses.
+    """
+    import numpy as np
+
+    arr = np.asarray(scl)
+    total = int(arr.size)
+    counts = {c: int(np.count_nonzero(arr == c)) for c in range(12)}
+    valid = int(np.count_nonzero(arr != S2_SCL_NODATA))
+    return {
+        "counts": counts,
+        "total": total,
+        "valid": valid,
+        "valid_pct": round(100.0 * valid / total, 2) if total else 0.0,
+    }

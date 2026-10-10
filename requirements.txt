@@ -11,3 +11,4 @@ PyYAML==6.0.3
 requests==2.34.2
 tifffile==2025.5.10
 rasterio==1.4.4
+pyarrow==25.0.1  # ohsome v2 GeoParquet row counts (count_parquet_features)

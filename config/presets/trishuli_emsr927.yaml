@@ -1,7 +1,7 @@
 # Preset AOI: Trishuli EMSR927 Flood Case Study (data only)
 id: "trishuli_emsr927"
 name: "Trishuli River Basin, Nepal"
-description: "September 2024 flood event along Trishuli corridor (Copernicus EMS EMSR927 study area)"
+description: "August 2026 flood event along Trishuli corridor (Copernicus EMS EMSR927 study area)"
 bbox: [85.15, 27.85, 85.35, 28.05]
-event_date: "2024-09-28"
-osm_snapshot_date: "2024-09-25"
+event_date: "2026-08-26"
+osm_snapshot_date: "2026-08-23"  # strictly before event_date (Rule 5); event - 3 days

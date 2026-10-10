@@ -32,6 +32,9 @@ class FetchConfig(BaseModel):
     timeout_seconds: float
     retries: int
     backoff_factor: float
+    # Span of the Sentinel-2 clip time window measured from the STAC datatake
+    # start; must cover the whole datatake (see config/default.yaml origin note).
+    s2_datatake_window_seconds: float
 
 
 class FloodConfig(BaseModel):

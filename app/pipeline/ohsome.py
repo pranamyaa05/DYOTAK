@@ -9,9 +9,14 @@ Two backends are supported (selected by config `osm.backend`):
 * ``v2`` (default, the supported API)
   POST {osm.v2_base_url}/extraction/features.parquet
   JSON body: {"filter": ..., "aoi": [min_lon,min_lat,max_lon,max_lat],
-              "time": {"start": ..., "end": ...}, "clip": true}
+              "time": {"start": "<iso-utc>", "end": "<iso-utc>"}, "clip": true}
   Header: Authorization: <DYOTAK_OHSOME_API_KEY>
   Response: GeoParquet (columns: osm_type, osm_id, tags, bbox, geom_type, geom(WKB), ...).
+  Verified live: time.start/time.end MUST be full timezone-aware ISO-8601 UTC
+  timestamps (a bare date is rejected with HTTP 422), and v2 requires
+  end > start (a point window start == end is also rejected). The request is
+  therefore sent first as a point window and, on 422, retried once as a
+  one-day window (end = start + 1 day, still before the event date).
 
 * ``v1`` (legacy, retained for reference; NOT usable today)
   POST {osm.base_url}/elements/geometry  (form fields bboxes/time/filter/properties)
@@ -28,6 +33,9 @@ import hashlib
 import io
 import json
 import logging
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -38,7 +46,11 @@ from app.common.cache import (
     read_cached_bytes,
     write_cached_bytes,
 )
-from app.common.errors import OhsomeAuthError, OhsomeUnavailableError
+from app.common.errors import (
+    OhsomeAuthError,
+    OhsomeRequestError,
+    OhsomeUnavailableError,
+)
 from app.common.retry import retry_with_backoff
 from app.settings import app_config, settings
 
@@ -115,9 +127,53 @@ OVERPASS_FILTERS: Dict[str, str] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Time handling (ohsome v2 requires timezone-aware ISO-8601 timestamps)
+# ---------------------------------------------------------------------------
+def _iso_utc(value: str) -> str:
+    """Normalise a date (or date+time) to a timezone-aware ISO-8601 UTC string.
+
+    ohsome v2 rejects a bare date such as ``2024-09-25`` with HTTP 422
+    ("Input should be a valid datetime"); it requires a full timestamp with an
+    explicit timezone, e.g. ``2024-09-25T00:00:00Z``.
+    """
+    return value if "T" in value else f"{value}T00:00:00Z"
+
+
+def _plus_days(value: str, days: int) -> str:
+    """Return ``value`` shifted by ``days`` as a full ISO-8601 UTC timestamp."""
+    dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    shifted = dt.astimezone(timezone.utc) + timedelta(days=days)
+    return shifted.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+#: A single instant (time.start == time.end). Documented v1 point-in-time form.
+TIME_FORM_POINT = "point"
+#: A one-day window (time.end == time.start + 1 day). v2 requires end > start,
+#: so this is the form that v2 actually accepts.
+TIME_FORM_DAY = "day_range"
+
+
+@dataclass
+class OhsomeExtract:
+    """A v2 extraction plus the time form that actually succeeded."""
+
+    data: bytes
+    time_form: str
+    time_start: str
+    time_end: str
+
+    @property
+    def time_window(self) -> Dict[str, Any]:
+        """Provenance record of the request window that produced these bytes."""
+        return {"start": self.time_start, "end": self.time_end, "form": self.time_form}
+
+
 def _overpass_timestamp(snapshot_date: str) -> str:
     """Normalise a date to the full ISO-8601 UTC timestamp Overpass [date:] needs."""
-    return snapshot_date if "T" in snapshot_date else f"{snapshot_date}T00:00:00Z"
+    return _iso_utc(snapshot_date)
 
 
 def build_overpass_attic_query(
@@ -160,14 +216,24 @@ def build_filter(feature_types: List[str]) -> str:
     return " or ".join(f"({FEATURE_FILTERS[f]})" for f in feature_types)
 
 
-def build_v2_request(bbox: List[float], snapshot_date: str, ohsome_filter: str) -> Dict[str, Any]:
-    """Build the ohsome v2 extraction/features JSON body."""
+def build_v2_request(
+    bbox: List[float],
+    snapshot_date: str,
+    ohsome_filter: str,
+    end_date: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Build the ohsome v2 extraction/features JSON body.
+
+    ``time.start`` and ``time.end`` are full timezone-aware ISO-8601 UTC
+    timestamps (bare dates are rejected with HTTP 422). By default ``end``
+    equals ``start`` (a point in time); pass ``end_date`` to widen the window.
+    """
+    start = _iso_utc(snapshot_date)
+    end = _iso_utc(end_date) if end_date else start
     return {
         "filter": ohsome_filter,
         "aoi": [float(c) for c in bbox],
-        # Point-in-time extraction. NOTE: start == end is inferred from the v1
-        # single-timestamp semantics; not yet verified against a live key.
-        "time": {"start": snapshot_date, "end": snapshot_date},
+        "time": {"start": start, "end": end},
         "clip": True,
     }
 
@@ -184,11 +250,44 @@ def _cache_root(cache_root: Optional[str]) -> str:
 # ---------------------------------------------------------------------------
 # v1 (legacy GeoJSON) — kept for reference/tests; endpoint currently 403
 # ---------------------------------------------------------------------------
+def _body_text(resp: requests.Response) -> str:
+    """Full, untruncated response body for error reporting."""
+    text = resp.text
+    if not text:
+        text = resp.content.decode("utf-8", errors="replace")
+    return text
+
+
+def _ohsome_http_error(label: str, status_code: int, body: str) -> Exception:
+    """Classify a non-200 ohsome response into a typed, correctly-retryable error.
+
+    401/403 -> auth (no retry); 5xx -> unavailable (retryable); any other 4xx
+    -> request error (no retry). The full body is included verbatim.
+    """
+    detail = f"ohsome {label} returned {status_code}: {body}"
+    if status_code in (401, 403):
+        return OhsomeAuthError(details=detail)
+    if status_code >= 500:
+        return OhsomeUnavailableError(details=detail)
+    return OhsomeRequestError(details=detail)
+
+
+def _ohsome_unavailable_from(exc: Exception) -> Exception:
+    """Map a retryable failure to OhsomeUnavailableError without nesting.
+
+    If the failure is already an OhsomeUnavailableError, return it unchanged so
+    the message is not wrapped inside itself.
+    """
+    if isinstance(exc, OhsomeUnavailableError):
+        return exc
+    return OhsomeUnavailableError(details=str(exc))
+
+
 @retry_with_backoff(
     retries=app_config.osm.retries,
     backoff_factor=1.5,
     timeout=app_config.osm.request_timeout_seconds,
-    on_failure_raise=lambda exc: OhsomeUnavailableError(details=str(exc)),
+    on_failure_raise=_ohsome_unavailable_from,
 )
 def fetch_feature_collection(
     bbox: List[float],
@@ -213,23 +312,27 @@ def fetch_feature_collection(
         )
     except requests.RequestException as exc:
         raise OhsomeUnavailableError(details=f"ohsome request failed: {exc}") from exc
-    if resp.status_code in (401, 403):
-        raise OhsomeAuthError(details=f"ohsome v1 returned {resp.status_code}: {resp.text[:200]}")
     if resp.status_code != 200:
-        raise OhsomeUnavailableError(
-            details=f"ohsome v1 returned {resp.status_code}: {resp.text[:200]}"
-        )
+        raise _ohsome_http_error("v1", resp.status_code, _body_text(resp))
     return resp.json()
 
 
 # ---------------------------------------------------------------------------
 # v2 (supported GeoParquet extraction)
 # ---------------------------------------------------------------------------
+def _post_v2(url: str, body: Dict[str, Any], headers: Dict[str, str], timeout: float) -> requests.Response:
+    """POST the extraction body. Timeouts/connection errors are retryable."""
+    try:
+        return requests.post(url, json=body, headers=headers, timeout=timeout)
+    except requests.RequestException as exc:
+        raise OhsomeUnavailableError(details=f"ohsome v2 request failed: {exc}") from exc
+
+
 @retry_with_backoff(
     retries=app_config.osm.retries,
     backoff_factor=1.5,
     timeout=app_config.osm.request_timeout_seconds,
-    on_failure_raise=lambda exc: OhsomeUnavailableError(details=str(exc)),
+    on_failure_raise=_ohsome_unavailable_from,
 )
 def fetch_features_parquet(
     bbox: List[float],
@@ -237,8 +340,20 @@ def fetch_features_parquet(
     ohsome_filter: str,
     api_key: Optional[str] = None,
     timeout: Optional[float] = None,
-) -> bytes:
-    """Download a GeoParquet extraction from the ohsome v2 API."""
+    event_date: Optional[str] = None,
+) -> OhsomeExtract:
+    """Download a GeoParquet extraction from the ohsome v2 API.
+
+    Sends a point-in-time request (time.start == time.end) using full
+    timezone-aware timestamps. If v2 rejects that window with HTTP 422 (it
+    requires end > start), retries ONCE with end = start + 1 day, provided that
+    day still precedes ``event_date`` (Rule 5). If both windows fail, the exact
+    response bodies are reported.
+
+    Only timeouts, connection errors and 5xx are retried; 401/403/422 and other
+    4xx surface immediately. Returns an OhsomeExtract recording which time form
+    succeeded so it can be written to provenance.
+    """
     key = api_key or settings.ohsome_api_key
     if not key:
         # Missing/invalid credentials: fail fast, never retry.
@@ -246,26 +361,37 @@ def fetch_features_parquet(
             details="ohsome v2 requires an API key (set DYOTAK_OHSOME_API_KEY)"
         )
     url = f"{app_config.osm.v2_base_url.rstrip('/')}/extraction/features.parquet"
-    try:
-        resp = requests.post(
-            url,
-            json=build_v2_request(bbox, snapshot_date, ohsome_filter),
-            headers={"Authorization": key, "Accept": "application/octet-stream"},
-            timeout=timeout or app_config.osm.request_timeout_seconds,
-        )
-    except requests.RequestException as exc:
-        raise OhsomeUnavailableError(details=f"ohsome v2 request failed: {exc}") from exc
-    if resp.status_code in (401, 403):
-        raise OhsomeAuthError(
-            details=f"ohsome v2 returned {resp.status_code}: {resp.content[:200]!r}"
-        )
-    if resp.status_code != 200:
-        raise OhsomeUnavailableError(
-            details=f"ohsome v2 returned {resp.status_code}: {resp.content[:200]!r}"
-        )
-    if not resp.content:
-        raise OhsomeUnavailableError(details="ohsome v2 returned an empty body")
-    return resp.content
+    headers = {"Authorization": key, "Accept": "application/octet-stream"}
+    timeout_s = timeout or app_config.osm.request_timeout_seconds
+
+    start = _iso_utc(snapshot_date)
+    attempts = [(TIME_FORM_POINT, start, start)]
+    # The one-day fallback is only added when it still precedes the event
+    # (Rule 5). Never widen past the event date.
+    day_end = _plus_days(snapshot_date, 1)
+    if event_date is None or day_end[:10] < event_date:
+        attempts.append((TIME_FORM_DAY, start, day_end))
+
+    rejection_notes: List[str] = []
+    for form, t_start, t_end in attempts:
+        body = build_v2_request(bbox, t_start, ohsome_filter, end_date=t_end)
+        resp = _post_v2(url, body, headers, timeout_s)
+        if resp.status_code == 200:
+            if not resp.content:
+                raise OhsomeUnavailableError(details="ohsome v2 returned an empty body")
+            return OhsomeExtract(resp.content, form, t_start, t_end)
+        if resp.status_code == 422:
+            # Rejected time window: remember the exact body and try the next form.
+            rejection_notes.append(
+                f"time[{form}] returned {resp.status_code}: {_body_text(resp)}"
+            )
+            continue
+        # 401/403, 5xx and other 4xx: classify and raise (retry only if 5xx).
+        raise _ohsome_http_error("v2", resp.status_code, _body_text(resp))
+
+    raise OhsomeRequestError(
+        details="ohsome v2 rejected every supported time window. " + " | ".join(rejection_notes)
+    )
 
 
 def count_parquet_features(data: bytes) -> Optional[int]:
@@ -276,6 +402,67 @@ def count_parquet_features(data: bytes) -> Optional[int]:
         return int(pq.read_table(io.BytesIO(data)).num_rows)
     except Exception:  # noqa: BLE001 - decoding is best-effort
         return None
+
+
+def max_edit_timestamp(data: bytes) -> Optional[str]:
+    """Newest OSM edit timestamp in a GeoParquet extract, as ISO-8601 UTC.
+
+    This is the real data timestamp the API reports for the returned snapshot:
+    if it is still before the event date, the extract provably contains no
+    post-event edits (Rule 5). Returns None when the column is absent or
+    pyarrow cannot decode the file.
+    """
+    try:
+        import pyarrow as pa
+        import pyarrow.compute as pc
+        import pyarrow.parquet as pq
+
+        table = pq.read_table(io.BytesIO(data), columns=["edit_timestamp"])
+        column = table.column("edit_timestamp")
+        if not pa.types.is_timestamp(column.type):
+            return None
+        scale = {"s": 1, "ms": 10**3, "us": 10**6, "ns": 10**9}[column.type.unit]
+        newest = pc.max(pc.cast(column, pa.int64())).as_py()
+        if newest is None:
+            return None
+        moment = datetime.fromtimestamp(newest / scale, timezone.utc)
+        return moment.strftime("%Y-%m-%dT%H:%M:%SZ")
+    except Exception:  # noqa: BLE001 - best-effort provenance
+        return None
+
+
+def fetch_ohsome_metadata(
+    api_key: Optional[str] = None,
+    timeout: Optional[float] = None,
+) -> Dict[str, Any]:
+    """GET {osm.v2_base_url}/metadata — the ohsome instance's data coverage.
+
+    Returns e.g. ``{"apiVersion": "2.0.0",
+    "temporalExtent": {"start": ..., "end": ...}}``; ``temporalExtent.end`` is
+    the timestamp of the latest OSM snapshot the instance holds (much later than
+    any pre-event date we request).
+    """
+    url = f"{app_config.osm.v2_base_url.rstrip('/')}/metadata"
+    key = api_key or settings.ohsome_api_key
+    headers = {"Authorization": key} if key else {}
+    try:
+        resp = requests.get(
+            url, headers=headers, timeout=timeout or app_config.osm.request_timeout_seconds
+        )
+    except requests.RequestException as exc:
+        raise OhsomeUnavailableError(
+            details=f"ohsome v2 metadata request failed: {exc}"
+        ) from exc
+    if resp.status_code != 200:
+        raise _ohsome_http_error("v2 metadata", resp.status_code, _body_text(resp))
+    return resp.json()
+
+
+def latest_osm_snapshot(metadata: Dict[str, Any]) -> Optional[str]:
+    """``temporalExtent.end`` (latest OSM data timestamp) from /metadata."""
+    extent = (metadata or {}).get("temporalExtent") or {}
+    end = extent.get("end")
+    return str(end) if end else None
 
 
 # ---------------------------------------------------------------------------
@@ -309,13 +496,31 @@ def fetch_preevent_osm_elements(
     )
 
     if resolved_backend == "v2":
-        return _fetch_v2(bbox, osm_snapshot_date, types, key, cache_root)
+        return _fetch_v2(bbox, osm_snapshot_date, event_date, types, key, cache_root)
     return _fetch_v1(bbox, osm_snapshot_date, types, key, cache_root)
+
+
+def _time_sidecar_path(path: Path) -> Path:
+    return path.with_name(path.stem + ".meta.json")
+
+
+def _read_time_window(path: Path, snapshot_date: str) -> Dict[str, Any]:
+    """Provenance time window for a cached extract (sidecar, else best-effort)."""
+    raw = read_cached_bytes(_time_sidecar_path(path))
+    if raw:
+        try:
+            window = json.loads(raw.decode("utf-8"))
+            if isinstance(window, dict) and window.get("start"):
+                return window
+        except (ValueError, UnicodeDecodeError):
+            pass
+    return {"start": _iso_utc(snapshot_date), "end": None, "form": "cached"}
 
 
 def _fetch_v2(
     bbox: List[float],
     snapshot_date: str,
+    event_date: str,
     types: List[str],
     key: str,
     cache_root: Optional[str],
@@ -324,6 +529,7 @@ def _fetch_v2(
     paths: Dict[str, str] = {}
     total = 0
     any_cached = True
+    time_window: Optional[Dict[str, Any]] = None
 
     for feature_type in types:
         part_key = compute_raw_clip_key(
@@ -336,8 +542,23 @@ def _fetch_v2(
         data = read_cached_bytes(path)
         if data is None:
             any_cached = False
-            data = fetch_features_parquet(bbox, snapshot_date, FEATURE_FILTERS[feature_type])
+            extract = fetch_features_parquet(
+                bbox,
+                snapshot_date,
+                FEATURE_FILTERS[feature_type],
+                event_date=event_date,
+            )
+            data = extract.data
             write_cached_bytes(path, data)
+            window = extract.time_window
+            # Persist which time form worked, so a cache hit still reports it.
+            write_cached_bytes(
+                _time_sidecar_path(path), json.dumps(window).encode("utf-8")
+            )
+        else:
+            window = _read_time_window(path, snapshot_date)
+        if time_window is None:
+            time_window = window
         paths[feature_type] = str(path)
         n = count_parquet_features(data)
         if n is None:
@@ -354,6 +575,7 @@ def _fetch_v2(
         "total": total,
         "parquet_paths": paths,
         "from_cache": any_cached,
+        "time_window": time_window,
     }
 
 
